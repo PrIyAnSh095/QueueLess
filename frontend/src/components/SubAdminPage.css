@@ -1,0 +1,129 @@
+.subadmin-page{
+  padding: 40px 20px;
+  background: #0b1220;
+  min-height: calc(100vh - 120px);
+}
+
+.subadmin-container{
+  max-width: 920px;
+  margin: 0 auto;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(12px);
+}
+
+.subadmin-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.subadmin-title{
+  margin: 0;
+  color: #fff;
+  font-size: 28px;
+  letter-spacing: 0.2px;
+}
+
+.subadmin-subtitle{
+  margin: 6px 0 0 0;
+  color: rgba(255,255,255,0.75);
+}
+
+.subadmin-form{
+  display:flex;
+  flex-direction:column;
+  gap: 18px;
+}
+
+.subadmin-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.subadmin-field{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+}
+
+.subadmin-label{
+  color: rgba(255,255,255,0.85);
+  font-size: 14px;
+}
+
+.subadmin-input{
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(0,0,0,0.2);
+  color: #fff;
+  outline: none;
+}
+
+.subadmin-input:focus{
+  border-color: rgba(99,102,241,0.8);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.25);
+}
+
+.subadmin-permissions{
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+}
+
+.subadmin-section-title{
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.subadmin-checkbox{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  color: rgba(255,255,255,0.85);
+  padding: 8px 0;
+  user-select: none;
+}
+
+.subadmin-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap: 10px;
+}
+
+.subadmin-btn-primary{
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(99,102,241,0.5);
+  background: rgba(99,102,241,0.25);
+  color: #fff;
+  cursor: pointer;
+}
+
+.subadmin-btn-primary:disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.subadmin-btn-secondary{
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  cursor: pointer;
+}
+
+@media (max-width: 720px){
+  .subadmin-grid{ grid-template-columns: 1fr; }
+}
+
+
