@@ -2,15 +2,34 @@ import Ticket from "../models/ticket.model.js";
 import Service from "../models/Service.model.js";
 import mongoose from "mongoose";
 
-export const joinQueue = async ({ serviceId, userId, userLocation }) => {
+export const joinQueue = async ({ serviceId, userId, userLocation, scheduledStart }) => {
   if (!mongoose.Types.ObjectId.isValid(serviceId)) throw new Error("Invalid serviceId");
 
-  const service = await Service.findById(serviceId);
+  const service = await Service.findOne({
+    _id: serviceId,
+    approvalStatus: "approved",
+    status: true
+  });
   if (!service) throw new Error("Service not found");
-  if (!service.status) throw new Error("Service is not currently active");
 
   const existing = await Ticket.findOne({ service: serviceId, user: userId, status: "waiting" });
   if (existing) throw new Error("You are already in this queue");
+
+  let scheduled = null;
+  if (scheduledStart != null && scheduledStart !== "") {
+    scheduled = new Date(scheduledStart);
+    if (Number.isNaN(scheduled.getTime())) throw new Error("Invalid scheduledStart");
+    if (scheduled <= new Date()) throw new Error("Cannot book a slot in the past");
+
+    const maxPerSlot =
+      service.maxTokens != null && service.maxTokens > 0 ? service.maxTokens : 10;
+    const booked = await Ticket.countDocuments({
+      service: serviceId,
+      status: "waiting",
+      scheduledStart: scheduled
+    });
+    if (booked >= maxPerSlot) throw new Error("This time slot is full");
+  }
 
   const lastTicket = await Ticket.findOne({ service: serviceId }).sort({ tokenNumber: -1 });
   const tokenNumber = lastTicket ? lastTicket.tokenNumber + 1 : 1;
@@ -21,10 +40,11 @@ export const joinQueue = async ({ serviceId, userId, userLocation }) => {
     tokenNumber,
     status: "waiting",
     userLocation: userLocation || {},
-    serviceLocation: service.location || {}
+    serviceLocation: service.location || {},
+    ...(scheduled ? { scheduledStart: scheduled } : {})
   });
 
-  return ticket.populate("service", "serviceName avgServiceTime location");
+  return ticket.populate("service", "serviceName avgServiceTime location duration");
 };
 
 export const leaveQueue = async ({ ticketId, userId }) => {

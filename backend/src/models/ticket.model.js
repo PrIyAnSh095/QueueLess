@@ -28,10 +28,16 @@ const ticketSchema = new mongoose.Schema(
     serviceLocation: {
       lat: { type: Number },
       lng: { type: Number }
+    },
+    /** When set, this ticket is tied to a scheduled slot (same instant for all bookings in that slot). */
+    scheduledStart: {
+      type: Date
     }
   },
   { timestamps: true }
 );
+
+ticketSchema.index({ service: 1, scheduledStart: 1, status: 1 });
 
 const Ticket = mongoose.model("Ticket", ticketSchema);
 

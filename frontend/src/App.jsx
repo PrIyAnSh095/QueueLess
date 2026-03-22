@@ -5,8 +5,8 @@ import ProtectedRoute from './utils/ProtectedRoute'
 import HomePage from './components/HomePage'
 import './App.css'
 import LoginPage from './components/LoginPage'
-import AdminPage from './components/AdminPage'
 import SubAdminPage from './components/SubAdminPage'
+import AdminDashboard from './components/AdminDashboard'
 import ServiceDetailsPage from './components/ServiceDetailsPage'
 import RegisterPage from './components/RegisterPage'
 import ServiceProviderPage from './components/ServiceProviderPage'
@@ -61,7 +61,7 @@ function App() {
                 path="/admin"
                 element={
                   <ProtectedRoute requiredRole="admin">
-                    <AdminPage />
+                    <AdminDashboard />
                   </ProtectedRoute>
                 }
               />

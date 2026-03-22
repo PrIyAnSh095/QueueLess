@@ -1,33 +1,46 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import './HomePage.css'
 import { getServices } from '../services/api'
+import './HomePage.css'
 
 const HomePage = () => {
   const [isVisible, setIsVisible] = useState(false)
   const [services, setServices] = useState([])
-  const [loadingServices, setLoadingServices] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
     setIsVisible(true)
-    const fetchServices = async () => {
-      try {
-        const res = await getServices()
-        setServices(res.data.data || [])
-      } catch {
-        setServices([])
-      } finally {
-        setLoadingServices(false)
-      }
-    }
-    fetchServices()
   }, [])
 
-  const serviceIcons = ['🆔', '📄', '💳', '🏛️', '🏥', '📋', '🔖', '🎫']
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await getServices()
+        if (!cancelled && res.data?.success) {
+          setServices(res.data.data || [])
+        }
+      } catch {
+        if (!cancelled) setServices([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const goToServiceDetails = (serviceId) => {
+    navigate(`/service-details/${serviceId}`)
+  }
+
+  const goToFirstServiceOrBrowse = () => {
+    if (services.length) goToServiceDetails(services[0]._id)
+    else navigate('/#featured-services')
+  }
 
   return (
     <div className="homepage">
+      {/* Hero Section */}
       <section id="home" className={`hero ${isVisible ? 'fade-in' : ''}`}>
         <div className="hero-background">
           <div className="gradient-orb orb-1"></div>
@@ -48,9 +61,9 @@ const HomePage = () => {
             <div className="hero-buttons">
               <button 
                 className="btn-hero-primary"
-                onClick={() => navigate('/#services')}
+                onClick={goToFirstServiceOrBrowse}
               >
-                <span>Browse Services</span>
+                <span>Book a Service</span>
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
@@ -88,7 +101,7 @@ const HomePage = () => {
                   <div className="service-card">
                     <div className="service-icon">📋</div>
                     <div className="service-info">
-                      <div className="service-name">Document Update</div>
+                      <div className="service-name">Aadhar Update</div>
                       <div className="service-time">Estimated: 2:30 PM</div>
                     </div>
                   </div>
@@ -99,52 +112,73 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section id="features" className="features">
+      {/* Featured Services (dummy showcase) */}
+      <section id="featured-services" className="features">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Why Choose QueueLess?</h2>
-            <p className="section-subtitle">Experience seamless service booking with smart predictions</p>
+            <h2 className="section-title">Explore Registered Services</h2>
+            <p className="section-subtitle">
+              A quick glimpse of the kind of services organizations can register on TokenFlow
+            </p>
           </div>
           <div className="features-grid">
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><div className="feature-icon">⏱️</div></div>
-              <h3 className="feature-title">Smart Time Prediction</h3>
-              <p className="feature-description">Get accurate ETA predictions. No more guessing or waiting unnecessarily.</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><div className="feature-icon">📱</div></div>
-              <h3 className="feature-title">Real-time Updates</h3>
-              <p className="feature-description">Receive instant updates about your token status and estimated service time.</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><div className="feature-icon">🏢</div></div>
-              <h3 className="feature-title">Multiple Services</h3>
-              <p className="feature-description">Book across various services from multiple organizations.</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><div className="feature-icon">🎯</div></div>
-              <h3 className="feature-title">Easy Booking</h3>
-              <p className="feature-description">Simple joinin process. Select your service and you're in the queue in seconds.</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><div className="feature-icon">📊</div></div>
-              <h3 className="feature-title">Queue Management</h3>
-              <p className="feature-description">Advanced FIFO queue management ensures fair and efficient service delivery.</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon-wrapper"><div className="feature-icon">🔒</div></div>
-              <h3 className="feature-title">Secure & Reliable</h3>
-              <p className="feature-description">JWT authentication and bcrypt encryption protect your data.</p>
-            </div>
+            {services.length === 0 ? (
+              <p className="section-subtitle" style={{ gridColumn: '1 / -1' }}>
+                No approved services yet. Organizations can register and list services here after admin approval.
+              </p>
+            ) : (
+              services.map((item) => {
+                const orgName = item.organizationName || 'Organization'
+                const initials = orgName
+                  .split(' ')
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part[0]?.toUpperCase())
+                  .join('')
+
+                return (
+                  <div key={item._id} className="feature-card service-showcase-card">
+                    <div className="service-showcase-header">
+                      <div className="service-avatar">{initials}</div>
+                      <div className="service-header-text">
+                        <div className="service-org-name">{orgName}</div>
+                        <div className="service-service-name">{item.serviceName}</div>
+                      </div>
+                    </div>
+                    <p className="feature-description">
+                      {item.description || 'Book a slot for this service.'}
+                    </p>
+                    <div className="service-pill-row">
+                      <span className="service-pill">Organization</span>
+                      <span className="service-pill">Service</span>
+                    </div>
+                    <div className="service-meta">
+                      {item.duration ? `${item.duration} min · ` : ''}
+                      {item.maxTokens ? `Up to ${item.maxTokens} tokens` : ''}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-book-slot"
+                      onClick={() => goToServiceDetails(item._id)}
+                    >
+                      Book Slot
+                    </button>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
       </section>
 
+      {/* How It Works Section */}
       <section id="how-it-works" className="how-it-works">
         <div className="container">
           <div className="section-header">
             <h2 className="section-title">How It Works</h2>
-            <p className="section-subtitle">Get started in three simple steps</p>
+            <p className="section-subtitle">
+              Get started in three simple steps
+            </p>
           </div>
           <div className="steps-container">
             <div className="step-item">
@@ -152,7 +186,10 @@ const HomePage = () => {
               <div className="step-content">
                 <div className="step-icon">🔍</div>
                 <h3 className="step-title">Browse Services</h3>
-                <p className="step-description">Explore available services from registered organizations. Find the service you need quickly.</p>
+                <p className="step-description">
+                  Explore available services from registered organizations. 
+                  Find the service you need quickly.
+                </p>
               </div>
             </div>
             <div className="step-connector"></div>
@@ -160,8 +197,11 @@ const HomePage = () => {
               <div className="step-number">2</div>
               <div className="step-content">
                 <div className="step-icon">📅</div>
-                <h3 className="step-title">Join the Queue</h3>
-                <p className="step-description">Click Join Queue and get instant confirmation with your token number and ETA.</p>
+                <h3 className="step-title">Book Your Slot</h3>
+                <p className="step-description">
+                  Select your preferred time slot and confirm your booking. 
+                  Get instant confirmation with your token number.
+                </p>
               </div>
             </div>
             <div className="step-connector"></div>
@@ -170,61 +210,72 @@ const HomePage = () => {
               <div className="step-content">
                 <div className="step-icon">✅</div>
                 <h3 className="step-title">Get Served</h3>
-                <p className="step-description">Track your position in real-time. Arrive when it's your turn.</p>
+                <p className="step-description">
+                  Receive notifications about your predicted service time. 
+                  Arrive on time and get served without waiting.
+                </p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Services Preview Section */}
       <section id="services" className="services-preview">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Available Services</h2>
-            <p className="section-subtitle">Join the queue for these services right now</p>
+            <h2 className="section-title">Popular Services</h2>
+            <p className="section-subtitle">
+              Book slots for these commonly used services
+            </p>
           </div>
-          {loadingServices ? (
-            <div className="services-loading">
-              {[1,2,3,4].map(i => (
-                <div key={i} className="service-preview-card skeleton" />
-              ))}
-            </div>
-          ) : services.length === 0 ? (
-            <div className="services-empty">
-              <div className="empty-icon">📋</div>
-              <p>No services available yet. Be the first to register your organization!</p>
-              <button className="btn-hero-secondary" onClick={() => navigate('/register')}>Register Organization</button>
-            </div>
-          ) : (
-            <div className="services-grid">
-              {services.map((service, index) => (
+          <div className="services-grid">
+            {services.length === 0 ? (
+              <p className="section-subtitle" style={{ gridColumn: '1 / -1' }}>
+                Popular services will appear here once organizations publish them.
+              </p>
+            ) : (
+              services.slice(0, 4).map((item, index) => (
                 <div
-                  key={service._id}
+                  key={item._id}
+                  role="button"
+                  tabIndex={0}
                   className="service-preview-card"
-                  onClick={() => navigate(`/service-details/${service._id}`)}
+                  onClick={() => goToServiceDetails(item._id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') goToServiceDetails(item._id)
+                  }}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div className="service-preview-icon">{serviceIcons[index % serviceIcons.length]}</div>
-                  <h3 className="service-preview-title">{service.serviceName}</h3>
-                  <p className="service-preview-description">{service.description || 'Click to view details and join queue'}</p>
-                  <div className="service-preview-meta">
-                    <span>⏱ {service.avgServiceTime || service.duration} min avg</span>
-                    <span>📍 {service.organizationId?.businessName || 'Organization'}</span>
+                  <div className="service-preview-icon">
+                    {['🆔', '📄', '💳', '🏛️'][index % 4]}
                   </div>
+                  <h3 className="service-preview-title">{item.serviceName}</h3>
+                  <p className="service-preview-description">
+                    {item.description || `Book with ${item.organizationName || 'this organization'}`}
+                  </p>
+                  {index === 0 ? <div className="service-preview-badge">Featured</div> : null}
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
       </section>
 
+      {/* CTA Section */}
       <section className="cta-section">
         <div className="container">
           <div className="cta-content">
             <h2 className="cta-title">Ready to Get Started?</h2>
-            <p className="cta-subtitle">Join thousands of users enjoying seamless service booking</p>
+            <p className="cta-subtitle">
+              Join thousands of users who are already enjoying seamless service booking
+            </p>
             <div className="cta-buttons">
-              <button className="btn-cta-primary" onClick={() => navigate('/login')}>
+              <button 
+                type="button"
+                className="btn-cta-primary"
+                onClick={goToFirstServiceOrBrowse}
+              >
                 Book a Service Now
               </button>
               <button className="btn-cta-secondary" onClick={() => navigate('/register')}>
@@ -239,3 +290,4 @@ const HomePage = () => {
 }
 
 export default HomePage
+

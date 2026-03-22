@@ -12,14 +12,18 @@ export const getMe = () => API.get("/auth/me");
 
 export const getServices = () => API.get("/services");
 export const getServiceById = (id) => API.get(`/services/${id}`);
+export const getServiceBookableDatesAPI = (serviceId) =>
+  API.get(`/services/${serviceId}/bookable-dates`);
+export const getServiceSlotsAPI = (serviceId, date) =>
+  API.get(`/services/${serviceId}/slots`, { params: { date } });
 export const getMyServices = () => API.get("/services/mine");
 export const createServiceAPI = (formData) =>
   API.post("/services/create", formData, { headers: { "Content-Type": "multipart/form-data" } });
 export const updateServiceAPI = (id, data) => API.put(`/services/${id}`, data);
 export const deleteServiceAPI = (id) => API.delete(`/services/${id}`);
 
-export const joinQueueAPI = (serviceId, userLocation) =>
-  API.post("/tickets/join", { serviceId, userLocation });
+export const joinQueueAPI = (serviceId, userLocation, scheduledStart) =>
+  API.post("/tickets/join", { serviceId, userLocation, scheduledStart });
 export const leaveQueueAPI = (ticketId) => API.put(`/tickets/leave/${ticketId}`);
 export const getQueuePositionAPI = (serviceId) => API.get(`/tickets/position/${serviceId}`);
 export const getMyTicketsAPI = () => API.get("/tickets/my-tickets");
@@ -30,5 +34,8 @@ export const getPendingProvidersAPI = () => API.get("/admin/providers/pending");
 export const getAllProvidersAPI = () => API.get("/admin/providers");
 export const approveProviderAPI = (id) => API.put(`/admin/providers/${id}/approve`);
 export const rejectProviderAPI = (id) => API.put(`/admin/providers/${id}/reject`);
+export const adminListServices = () => API.get("/services/admin");
+export const adminSetServiceApproval = (id, approvalStatus) =>
+  API.patch(`/services/${id}/approval-status`, { approvalStatus });
 
 export default API;

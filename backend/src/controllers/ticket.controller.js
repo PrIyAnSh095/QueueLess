@@ -2,10 +2,15 @@ import * as ticketService from "../services/ticket.service.js";
 
 export const joinQueue = async (req, res) => {
   try {
-    const { serviceId, userLocation } = req.body;
+    const { serviceId, userLocation, scheduledStart } = req.body;
     if (!serviceId) return res.status(400).json({ success: false, message: "serviceId is required" });
 
-    const ticket = await ticketService.joinQueue({ serviceId, userId: req.user._id, userLocation });
+    const ticket = await ticketService.joinQueue({
+      serviceId,
+      userId: req.user._id,
+      userLocation,
+      scheduledStart
+    });
     return res.status(201).json({ success: true, data: ticket });
   } catch (error) {
     const status = error.message.includes("already in this queue") ? 409 : 400;

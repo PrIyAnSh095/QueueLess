@@ -65,16 +65,16 @@ const LoginPage = () => {
 
           <form className="login-form" onSubmit={handleSubmit} autoComplete="on">
             <div className="form-group">
-              <label htmlFor="email" className="form-label">Email</label>
+              <label htmlFor="email" className="form-label">Email / Username</label>
               <input
                 id="email"
                 name="email"
-                type="email"
+                type="text"
                 className="form-input"
-                placeholder="Enter your email"
+                placeholder="Enter your email or username"
                 value={formData.email}
                 onChange={handleInputChange}
-                autoComplete="email"
+                autoComplete="username"
                 required
               />
             </div>

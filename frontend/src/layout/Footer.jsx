@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { Ticket } from 'lucide-react'
 import './layout.css'
 
 const Footer = () => {
@@ -9,8 +10,10 @@ const Footer = () => {
         <div className="footer-content">
           <div className="footer-section">
             <div className="footer-logo">
-              <span className="logo-icon">🎫</span>
-              <span className="logo-text">TokenFlow</span>
+              <span className="logo-mark" aria-hidden>
+                <Ticket size={24} strokeWidth={2} className="logo-mark-icon" />
+              </span>
+              <span className="logo-text">QueueLess</span>
             </div>
             <p className="footer-description">
               Smart token registration system for seamless service booking

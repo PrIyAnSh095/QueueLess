@@ -55,14 +55,26 @@
   gap: 0.5rem;
   font-size: 1.5rem;
   font-weight: 700;
+}
+
+/* Gradient only on the wordmark — avoid text-fill on the whole link (breaks emoji/SVG siblings). */
+.logo-text {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.logo-icon {
-  font-size: 2rem;
+.logo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #a5b4fc;
+}
+
+.logo-mark-icon {
+  display: block;
 }
 
 .nav-links {
@@ -167,6 +179,9 @@
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
+}
+
+.footer-logo .logo-text {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

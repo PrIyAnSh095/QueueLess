@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Ticket } from 'lucide-react'
 import { useAuth } from '../utils/AuthContext'
 import './layout.css'
 
@@ -18,7 +19,9 @@ const Header = () => {
     <nav className="navbar">
       <div className="nav-container">
         <Link to="/" className="logo" style={{ textDecoration: 'none' }}>
-          <span className="logo-icon">🎫</span>
+          <span className="logo-mark" aria-hidden>
+            <Ticket size={26} strokeWidth={2} className="logo-mark-icon" />
+          </span>
           <span className="logo-text">QueueLess</span>
         </Link>
         <div className="nav-links">
