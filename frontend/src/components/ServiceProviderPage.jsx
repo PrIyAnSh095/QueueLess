@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { API, getMeAPI } from '../services/api'
+import LocationPicker from './LocationPicker'
 import './ServiceProviderPage.css'
 
 const ServiceProviderPage = () => {
@@ -9,90 +11,53 @@ const ServiceProviderPage = () => {
   const [showEditServiceModal, setShowEditServiceModal] = useState(false)
   const [selectedService, setSelectedService] = useState(null)
 
-  // Mock data - replace with real data from your backend
-  const organizationInfo = {
-    name: 'Aadhar Services Center',
-    email: 'contact@aadharservices.com',
-    phone: '+91 9876543210',
-    address: '123 Main Street, Mumbai, Maharashtra 400001',
-    registrationDate: '2024-01-01',
-    status: 'active'
+  const [profile, setProfile] = useState(null)
+  const [services, setServices] = useState([])
+  const [stats, setStats] = useState({ totalBookings: 0, todayBookings: 0, pendingBookings: 0, completedBookings: 0, activeServices: 0, averageWaitTime: '0 mins' })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      const [meRes, servRes] = await Promise.all([
+        getMeAPI(),
+        API.get('/services/admin')
+      ])
+      
+      const p = meRes.data.providerProfile
+      setProfile(p)
+      
+      if (servRes.data.success) {
+        setServices(servRes.data.data)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const stats = {
-    totalBookings: 1250,
-    todayBookings: 45,
-    pendingBookings: 12,
-    completedBookings: 1180,
-    activeServices: 3,
-    averageWaitTime: '18 minutes'
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault()
+    try {
+       await API.put('/auth/me', {
+         businessName: profile.businessName,
+         phone: profile.phone,
+         address: profile.address,
+         location: profile.location
+       })
+       alert('Profile updated!')
+    } catch (err) {
+       alert('Update failed')
+    }
   }
 
-  const services = [
-    {
-      id: 1,
-      name: 'Aadhar Update',
-      description: 'Update your Aadhar card details',
-      duration: '30-45 minutes',
-      price: 'Free',
-      status: 'active',
-      totalBookings: 850
-    },
-    {
-      id: 2,
-      name: 'Document Verification',
-      description: 'Verify your documents quickly',
-      duration: '20-30 minutes',
-      price: 'Free',
-      status: 'active',
-      totalBookings: 320
-    },
-    {
-      id: 3,
-      name: 'Address Change',
-      description: 'Change your address on Aadhar',
-      duration: '25-35 minutes',
-      price: 'Free',
-      status: 'active',
-      totalBookings: 80
-    }
-  ]
+  if (loading) return <div className="loading">Loading Dashboard...</div>
+  if (!profile) return <div className="error">Profile not found</div>
 
-  const bookings = [
-    {
-      id: 1,
-      tokenNumber: 'T-2024-001',
-      userName: 'John Doe',
-      userEmail: 'john@example.com',
-      service: 'Aadhar Update',
-      bookingDate: '2024-01-16',
-      bookingTime: '10:00 AM',
-      status: 'pending',
-      estimatedTime: '10:18 AM'
-    },
-    {
-      id: 2,
-      tokenNumber: 'T-2024-002',
-      userName: 'Jane Smith',
-      userEmail: 'jane@example.com',
-      service: 'Document Verification',
-      bookingDate: '2024-01-16',
-      bookingTime: '10:30 AM',
-      status: 'in-progress',
-      estimatedTime: '10:48 AM'
-    },
-    {
-      id: 3,
-      tokenNumber: 'T-2024-003',
-      userName: 'Mike Johnson',
-      userEmail: 'mike@example.com',
-      service: 'Address Change',
-      bookingDate: '2024-01-16',
-      bookingTime: '11:00 AM',
-      status: 'pending',
-      estimatedTime: '11:18 AM'
-    }
-  ]
 
   const handleAddService = () => {
     navigate('/service-provider/create-service')
@@ -125,10 +90,10 @@ const ServiceProviderPage = () => {
             <p className="sp-subtitle">Manage your services and bookings</p>
           </div>
           <div className="sp-org-info">
-            <div className="sp-org-avatar">{organizationInfo.name.charAt(0)}</div>
+            <div className="sp-org-avatar">{profile.businessName.charAt(0)}</div>
             <div>
-              <div className="sp-org-name">{organizationInfo.name}</div>
-              <div className="sp-org-status active">Active</div>
+              <div className="sp-org-name">{profile.businessName}</div>
+              <div className="sp-org-status active">{profile.status}</div>
             </div>
           </div>
         </div>
@@ -246,6 +211,10 @@ const ServiceProviderPage = () => {
                       <span className="action-icon">⚙️</span>
                       Update Profile
                     </button>
+                    <button className="sp-quick-action-btn" onClick={() => setActiveTab('services')}>
+                      <span className="action-icon">⏱️</span>
+                      Open Live Counter
+                    </button>
                     <button className="sp-quick-action-btn">
                       <span className="action-icon">📊</span>
                       View Reports
@@ -268,14 +237,14 @@ const ServiceProviderPage = () => {
               </div>
               <div className="services-list">
                 {services.map((service) => (
-                  <div key={service.id} className="service-item-card">
+                  <div key={service._id} className="service-item-card">
                     <div className="service-item-header">
                       <div>
-                        <h3 className="service-item-name">{service.name}</h3>
+                        <h3 className="service-item-name">{service.serviceName}</h3>
                         <p className="service-item-description">{service.description}</p>
                       </div>
-                      <span className={`service-item-status ${service.status}`}>
-                        {service.status}
+                      <span className={`service-item-status ${service.approvalStatus}`}>
+                        {service.approvalStatus}
                       </span>
                     </div>
                     <div className="service-item-details">
@@ -293,18 +262,32 @@ const ServiceProviderPage = () => {
                       </div>
                     </div>
                     <div className="service-item-actions">
-                      <button
-                        className="btn-edit"
-                        onClick={() => handleEditService(service)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleDeleteService(service.id)}
-                      >
-                        Delete
-                      </button>
+                      {service.approvalStatus === "approved" && (
+                        <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+                          <button
+                            className="btn-counter"
+                            style={{ backgroundColor: "#7c3aed", color: "white", padding: "6px 12px", borderRadius: "6px", border: "none", cursor: "pointer" }}
+                            onClick={() => navigate(`/counter/${service._id}`)}
+                          >
+                            Manage Counter
+                          </button>
+                          <button
+                            className="btn-setup"
+                            style={{ backgroundColor: "#f3f4f6", color: "#374151", padding: "6px 12px", borderRadius: "6px", border: "1px solid #d1d5db", cursor: "pointer" }}
+                            onClick={() => navigate(`/service-provider/create-queue?serviceId=${service._id}`)}
+                          >
+                            Setup Queue
+                          </button>
+                        </div>
+                      )}
+                      <div className="action-buttons-row" style={{ display: "flex", gap: "8px" }}>
+                        <button className="btn-edit" onClick={() => handleEditService(service)}>
+                          Edit
+                        </button>
+                        <button className="btn-delete" onClick={() => handleDeleteService(service._id)}>
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -390,28 +373,29 @@ const ServiceProviderPage = () => {
           {activeTab === 'settings' && (
             <div className="sp-settings-section">
               <h2 className="sp-section-title">Organization Settings</h2>
-              <div className="settings-card">
                 <h3>Organization Information</h3>
-                <div className="settings-form">
+                <form className="settings-form" onSubmit={handleUpdateProfile}>
                   <div className="settings-form-group">
                     <label>Organization Name</label>
-                    <input type="text" defaultValue={organizationInfo.name} />
-                  </div>
-                  <div className="settings-form-group">
-                    <label>Email</label>
-                    <input type="email" defaultValue={organizationInfo.email} />
+                    <input type="text" value={profile.businessName} onChange={e => setProfile({...profile, businessName: e.target.value})} />
                   </div>
                   <div className="settings-form-group">
                     <label>Phone Number</label>
-                    <input type="tel" defaultValue={organizationInfo.phone} />
+                    <input type="tel" value={profile.phone} onChange={e => setProfile({...profile, phone: e.target.value})} />
                   </div>
                   <div className="settings-form-group">
                     <label>Address</label>
-                    <textarea rows="3" defaultValue={organizationInfo.address}></textarea>
+                    <textarea rows="3" value={profile.address} onChange={e => setProfile({...profile, address: e.target.value})}></textarea>
                   </div>
-                  <button className="btn-save-settings">Save Changes</button>
-                </div>
-              </div>
+                  <div className="settings-form-group">
+                    <label>Location on Map</label>
+                    <LocationPicker 
+                      value={profile.location} 
+                      onChange={loc => setProfile({...profile, location: loc})} 
+                    />
+                  </div>
+                  <button type="submit" className="btn-save-settings">Save Changes</button>
+                </form>
               <div className="settings-card">
                 <h3>Account Settings</h3>
                 <div className="settings-options">

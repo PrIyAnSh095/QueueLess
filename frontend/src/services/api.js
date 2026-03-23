@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = axios.create({
+export const API = axios.create({
   baseURL: "http://localhost:5000/api",
   withCredentials: true
 });
@@ -8,7 +8,11 @@ const API = axios.create({
 export const registerUser = (data) => API.post("/auth/register", data);
 export const loginUser = (data) => API.post("/auth/login", data);
 export const logoutUser = () => API.post("/auth/logout");
+export const getMeAPI = () => API.get("/auth/me");
 export const getMe = () => API.get("/auth/me");
+
+export const createQueueAPI = (data) => API.post("/services/configure-queue", data);
+export const getQueues = () => API.get("/queues");
 
 export const getServices = () => API.get("/services");
 export const getServiceById = (id) => API.get(`/services/${id}`);
@@ -34,8 +38,16 @@ export const getPendingProvidersAPI = () => API.get("/admin/providers/pending");
 export const getAllProvidersAPI = () => API.get("/admin/providers");
 export const approveProviderAPI = (id) => API.put(`/admin/providers/${id}/approve`);
 export const rejectProviderAPI = (id) => API.put(`/admin/providers/${id}/reject`);
+export const getAllBookingsAPI = () => API.get("/admin/bookings");
 export const adminListServices = () => API.get("/services/admin");
 export const adminSetServiceApproval = (id, approvalStatus) =>
   API.patch(`/services/${id}/approval-status`, { approvalStatus });
+
+
+export const getTrendingServicesAPI = () => API.get("/analytics/trending");
+export const getProviderStatsAPI = (id) => API.get(`/analytics/provider/${id}`);
+export const getGlobalStatsAPI = () => API.get("/analytics/global");
+export const completeTicketAPI = (id) => API.put(`/tickets/complete/${id}`);
+export const transferTicketAPI = (id, targetServiceId) => API.put(`/tickets/transfer/${id}`, { targetServiceId });
 
 export default API;

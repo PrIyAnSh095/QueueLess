@@ -6,7 +6,10 @@ import {
   getPublicServiceById,
   getServiceBookableDates,
   getServiceSlots,
-  updateServiceApprovalStatus
+  updateServiceApprovalStatus,
+  getPublicProvider,
+  listServicesByProvider,
+  configureQueue
 } from "../controllers/service.Controller.js";
 import { protect } from "../middlewares/auth.middleware.js";
 import { adminOnly, providerOnly } from "../middlewares/role.middleware.js";
@@ -21,5 +24,10 @@ router.get("/:id/bookable-dates", getServiceBookableDates);
 router.get("/:id/slots", getServiceSlots);
 router.get("/:id", getPublicServiceById);
 router.patch("/:id/approval-status", protect, adminOnly, updateServiceApprovalStatus);
+router.post("/:id/configure-queue", protect, providerOnly, configureQueue);
+router.post("/configure-queue", protect, providerOnly, configureQueue); // For compatibility with frontend sending serviceId in body
+
+router.get("/provider/:id", getPublicProvider);
+router.get("/provider/:id/services", listServicesByProvider);
 
 export default router;

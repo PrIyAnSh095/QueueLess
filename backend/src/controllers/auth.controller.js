@@ -145,9 +145,49 @@ export const getMe = async (req, res) => {
     let providerProfile = null;
     if (user.role === "provider") {
       providerProfile = await ServiceProvider.findOne({ user: user._id });
+      
+      // Auto-create basic profile if missing for a provider
+      if (!providerProfile) {
+        providerProfile = await ServiceProvider.create({
+          user: user._id,
+          businessName: user.name + "'s Organization",
+          phone: user.phone || "",
+          status: "approved" // Auto-approve for existing providers to fix their state
+        });
+      }
     }
 
     return res.status(200).json({ user, providerProfile });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+export const updateMe = async (req, res) => {
+  try {
+    const { name, phone, businessName, address, location } = req.body;
+    
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (name) user.name = name;
+    if (phone) user.phone = phone;
+    await user.save();
+
+    let providerProfile = null;
+    if (user.role === "provider") {
+      providerProfile = await ServiceProvider.findOne({ user: user._id });
+      if (providerProfile) {
+        if (businessName) providerProfile.businessName = businessName;
+        if (phone) providerProfile.phone = phone;
+        if (address) providerProfile.address = address;
+        if (location) providerProfile.location = location;
+        await providerProfile.save();
+      }
+    }
+
+    return res.status(200).json({ success: true, user, providerProfile });
   } catch (error) {
     return res.status(500).json({ message: "Server error" });
   }

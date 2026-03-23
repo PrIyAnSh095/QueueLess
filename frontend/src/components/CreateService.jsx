@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { createServiceAPI } from "../services/api";
 import {
   Briefcase,
@@ -44,6 +45,7 @@ function FieldError({ message }) {
 
 /* ─── Main Component ─────────────────────────────────────────────────────────── */
 export default function CreateService() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     serviceName: "",
     description: "",
@@ -52,7 +54,10 @@ export default function CreateService() {
     certificate: null,
     isActive: true,
     requiredDocuments: ["Aadhar Card", "Address Proof", "Passport Photo"],
+    features: [],
+    additionalRequirements: "",
   });
+  const [featureInput, setFeatureInput] = useState("");
   const [docNameInput, setDocNameInput] = useState("");
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -91,6 +96,8 @@ export default function CreateService() {
       formData.append("maxTokens", String(form.maxTokens));
       formData.append("status", String(form.isActive));
       formData.append("requiredDocuments", JSON.stringify(form.requiredDocuments));
+      formData.append("features", JSON.stringify(form.features));
+      formData.append("additionalRequirements", form.additionalRequirements);
       if (form.certificate) {
         formData.append("certificate", form.certificate);
       }
@@ -106,7 +113,10 @@ export default function CreateService() {
       }
 
       setToast(true);
-      setTimeout(() => setToast(false), 3500);
+      setTimeout(() => {
+        setToast(false);
+        navigate(`/service-provider/create-queue?serviceId=${data.data._id}`);
+      }, 2000);
     } catch (err) {
       setErrors((prev) => ({
         ...prev,
@@ -202,6 +212,19 @@ export default function CreateService() {
           <FieldError message={errors.description} />
         </div>
 
+        <div className="field-group">
+          <label className="field-label">
+            <Sparkles size={14} className="field-icon" />
+            Additional Requirements
+          </label>
+          <textarea
+            className="textarea"
+            placeholder="Any specific instructions or requirements for the users…"
+            value={form.additionalRequirements}
+            onChange={(e) => update("additionalRequirements", e.target.value)}
+          />
+        </div>
+
         {errors.form && <FieldError message={errors.form} />}
 
         <div className="divider" />
@@ -241,6 +264,58 @@ export default function CreateService() {
             />
             <FieldError message={errors.maxTokens} />
           </div>
+        </div>
+
+        <div className="field-group">
+          <label className="field-label">
+            <Sparkles size={14} className="field-icon" />
+            Service Features
+          </label>
+          <div className="doc-add-row">
+            <input
+              className="input"
+              placeholder="e.g. Free Wi-Fi, Express Lane"
+              value={featureInput}
+              onChange={(e) => setFeatureInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const val = featureInput.trim();
+                  if (val) {
+                    setForm(prev => ({ ...prev, features: [...prev.features, val] }));
+                    setFeatureInput("");
+                  }
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="btn-add-doc"
+              onClick={() => {
+                const val = featureInput.trim();
+                if (val) {
+                  setForm(prev => ({ ...prev, features: [...prev.features, val] }));
+                  setFeatureInput("");
+                }
+              }}
+            >
+              + Add
+            </button>
+          </div>
+          <ul className="doc-name-list">
+            {form.features.map((f, i) => (
+              <li key={i} className="doc-name-item">
+                <span>{f}</span>
+                <button
+                  type="button"
+                  className="doc-name-remove"
+                  onClick={() => setForm(prev => ({ ...prev, features: prev.features.filter((_, idx) => idx !== i) }))}
+                >
+                  <X size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="divider" />

@@ -11,6 +11,9 @@ import ServiceDetailsPage from './components/ServiceDetailsPage'
 import RegisterPage from './components/RegisterPage'
 import ServiceProviderPage from './components/ServiceProviderPage'
 import CreateService from './components/CreateService'
+import CreateQueue from './components/CreateQueue'
+import PlacePage from './components/PlacePage'
+import CounterPage from './components/CounterPage'
 import MyTicketsPage from './components/MyTicketsPage'
 import Header from './layout/Header'
 import Footer from './layout/Footer'
@@ -30,6 +33,7 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/service-details/:id" element={<ServiceDetailsPage />} />
               <Route path="/service-details" element={<ServiceDetailsPage />} />
+              <Route path="/place/:id" element={<PlacePage />} />
 
               <Route
                 path="/my-tickets"
@@ -57,6 +61,22 @@ function App() {
                 }
               />
 
+              <Route
+                path="/counter/:serviceId"
+                element={
+                  <ProtectedRoute requiredRole="provider">
+                    <CounterPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/service-provider/create-queue"
+                element={
+                  <ProtectedRoute requiredRole="provider">
+                    <CreateQueue />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/admin"
                 element={

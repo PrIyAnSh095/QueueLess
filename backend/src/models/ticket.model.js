@@ -32,6 +32,16 @@ const ticketSchema = new mongoose.Schema(
     /** When set, this ticket is tied to a scheduled slot (same instant for all bookings in that slot). */
     scheduledStart: {
       type: Date
+    },
+    servedAt: {
+      type: Date
+    },
+    completedAt: {
+      type: Date
+    },
+    notified: {
+      type: Boolean,
+      default: false
     }
   },
   { timestamps: true }

@@ -3,8 +3,9 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes.js";
 import serviceRoutes from "./routes/service.routes.js";
-// import ticketRoutes from "./routes/ticket.routes.js";
-// import adminRoutes from "./routes/admin.routes.js";
+import ticketRoutes from "./routes/ticket.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
 
 const app = express();
 
@@ -19,8 +20,9 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/services", serviceRoutes);
-// app.use("/api/tickets", ticketRoutes);
-// app.use("/api/admin", adminRoutes);
+app.use("/api/tickets", ticketRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 app.use("/uploads", express.static("uploads"));
 

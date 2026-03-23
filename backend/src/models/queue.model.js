@@ -2,15 +2,28 @@ import mongoose from "mongoose";
 
 const queueSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Service",
+      required: true
     },
-    location: {
+    userLimit: {
+      type: Number,
+      default: 100
+    },
+    openingTime: {
       type: String,
-      required: true,
-      trim: true
+      default: "09:00"
+    },
+    closingTime: {
+      type: String,
+      default: "17:00"
+    },
+    breakStartTime: {
+      type: String
+    },
+    breakEndTime: {
+      type: String
     },
     avgServiceTime: {
       type: Number,

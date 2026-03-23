@@ -1,13 +1,20 @@
 import mongoose from "mongoose";
 import Service from "../models/Service.model.js";
+import ServiceProvider from "../models/ServiceProvider.model.js";
 import path from "path";
 import {
   getAvailableSlotsForService,
   getBookableDateKeys
 } from "../services/slot.service.js";
+import { calculateDistance } from "../utils/location.js";
 
 export const createService = async (req, res) => {
   try {
+    const provider = await ServiceProvider.findOne({ user: req.user.id });
+    if (!provider) {
+      return res.status(404).json({ success: false, message: "Provider profile not found" });
+    }
+
     const {
       serviceName,
       description,
@@ -19,7 +26,9 @@ export const createService = async (req, res) => {
       closeTime,
       slotIntervalMinutes,
       bookingHorizonDays,
-      workingDays: rawWorkingDays
+      workingDays: rawWorkingDays,
+      features,
+      additionalRequirements
     } = req.body;
 
     let requiredDocuments = [];
@@ -53,7 +62,7 @@ export const createService = async (req, res) => {
     }
 
     const service = new Service({
-      organizationId: req.user.id,
+      organizationId: provider._id,
       serviceName,
       description,
       duration,
@@ -70,7 +79,9 @@ export const createService = async (req, res) => {
       ...(bookingHorizonDays != null && !Number.isNaN(Number(bookingHorizonDays))
         ? { bookingHorizonDays: Number(bookingHorizonDays) }
         : {}),
-      ...(workingDays && workingDays.length ? { workingDays } : {})
+      ...(workingDays && workingDays.length ? { workingDays } : {}),
+      features: Array.isArray(features) ? features : [],
+      additionalRequirements
     });
 
     await service.save();
@@ -133,10 +144,14 @@ export const listServicesForAdmin = async (req, res) => {
 
 export const listPublicServices = async (_req, res) => {
   try {
-    const services = await Service.find({
+    const { providerId } = _req.query;
+    const query = {
       approvalStatus: "approved",
       status: true
-    })
+    };
+    if (providerId) query.organizationId = providerId;
+
+    const services = await Service.find(query)
       .sort({ createdAt: -1 })
       .limit(12)
       .populate("organizationId", "businessName");
@@ -233,7 +248,24 @@ export const getPublicServiceById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Service not found" });
     }
 
-    return res.status(200).json({ success: true, data: service });
+    const { userLat, userLng } = req.query;
+    let distance = null;
+    if (userLat && userLng && service.organizationId?.location?.lat && service.organizationId?.location?.lng) {
+      distance = calculateDistance(
+        parseFloat(userLat),
+        parseFloat(userLng),
+        service.organizationId.location.lat,
+        service.organizationId.location.lng
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...service.toObject(),
+        distance
+      }
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -261,5 +293,62 @@ export const updateServiceApprovalStatus = async (req, res) => {
     return res.status(200).json({ success: true, data: service });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getPublicProvider = async (req, res) => {
+  try {
+    const provider = await mongoose.model("ServiceProvider").findById(req.params.id)
+      .populate("user", "name email");
+    if (!provider) return res.status(404).json({ success: false, message: "Provider not found" });
+    res.json({ success: true, data: provider });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const listServicesByProvider = async (req, res) => {
+  try {
+    const services = await Service.find({ organizationId: req.params.id, approvalStatus: "approved" });
+    res.json({ success: true, data: services });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const configureQueue = async (req, res) => {
+  try {
+    const { 
+      serviceId, 
+      userLimit, 
+      openingTime, 
+      closingTime, 
+      breakStartTime, 
+      breakEndTime, 
+      avgServiceTime 
+    } = req.body;
+
+    const service = await Service.findById(serviceId || req.params.id);
+    if (!service) {
+      return res.status(404).json({ success: false, message: "Service not found" });
+    }
+
+    // Verify ownership
+    const provider = await ServiceProvider.findOne({ user: req.user.id });
+    if (!provider || String(service.organizationId) !== String(provider._id)) {
+      return res.status(403).json({ success: false, message: "Not authorized to configure this service" });
+    }
+
+    if (userLimit) service.maxTokens = Number(userLimit);
+    if (openingTime) service.openTime = openingTime;
+    if (closingTime) service.closeTime = closingTime;
+    if (avgServiceTime) service.avgServiceTime = Number(avgServiceTime);
+    // Break time can be added to model if needed, but these are core for now
+    
+    await service.save();
+
+    res.status(200).json({ success: true, message: "Queue configured successfully", data: service });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

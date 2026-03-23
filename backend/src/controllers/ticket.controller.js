@@ -54,6 +54,25 @@ export const serveNext = async (req, res) => {
   }
 };
 
+export const completeTicket = async (req, res) => {
+  try {
+    const ticket = await ticketService.completeTicket(req.params.ticketId);
+    return res.status(200).json({ success: true, data: ticket });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const transferTicket = async (req, res) => {
+  try {
+    const { targetServiceId } = req.body;
+    const ticket = await ticketService.transferTicket(req.params.ticketId, targetServiceId);
+    return res.status(200).json({ success: true, data: ticket });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 export const getMyTickets = async (req, res) => {
   try {
     const tickets = await ticketService.getUserTickets(req.user._id);

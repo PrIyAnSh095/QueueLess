@@ -1,6 +1,7 @@
 import Ticket from "../models/ticket.model.js";
 import Service from "../models/Service.model.js";
 import mongoose from "mongoose";
+import { checkAndNotifyTravel } from "./notification.service.js";
 
 export const joinQueue = async ({ serviceId, userId, userLocation, scheduledStart }) => {
   if (!mongoose.Types.ObjectId.isValid(serviceId)) throw new Error("Invalid serviceId");
@@ -15,24 +16,14 @@ export const joinQueue = async ({ serviceId, userId, userLocation, scheduledStar
   const existing = await Ticket.findOne({ service: serviceId, user: userId, status: "waiting" });
   if (existing) throw new Error("You are already in this queue");
 
-  let scheduled = null;
-  if (scheduledStart != null && scheduledStart !== "") {
-    scheduled = new Date(scheduledStart);
-    if (Number.isNaN(scheduled.getTime())) throw new Error("Invalid scheduledStart");
-    if (scheduled <= new Date()) throw new Error("Cannot book a slot in the past");
-
-    const maxPerSlot =
-      service.maxTokens != null && service.maxTokens > 0 ? service.maxTokens : 10;
-    const booked = await Ticket.countDocuments({
-      service: serviceId,
-      status: "waiting",
-      scheduledStart: scheduled
-    });
-    if (booked >= maxPerSlot) throw new Error("This time slot is full");
-  }
-
-  const lastTicket = await Ticket.findOne({ service: serviceId }).sort({ tokenNumber: -1 });
-  const tokenNumber = lastTicket ? lastTicket.tokenNumber + 1 : 1;
+  // Atomic token assignment
+  const updatedService = await Service.findByIdAndUpdate(
+    serviceId,
+    { $inc: { currentToken: 1 } },
+    { new: true, upsert: true }
+  );
+  
+  const tokenNumber = updatedService.currentToken || 1;
 
   const ticket = await Ticket.create({
     service: serviceId,
@@ -41,7 +32,7 @@ export const joinQueue = async ({ serviceId, userId, userLocation, scheduledStar
     status: "waiting",
     userLocation: userLocation || {},
     serviceLocation: service.location || {},
-    ...(scheduled ? { scheduledStart: scheduled } : {})
+    scheduledStart: scheduledStart ? new Date(scheduledStart) : null
   });
 
   return ticket.populate("service", "serviceName avgServiceTime location duration");
@@ -62,7 +53,10 @@ export const getQueuePosition = async ({ serviceId, userId }) => {
   const service = await Service.findById(serviceId);
   if (!service) throw new Error("Service not found");
 
-  const userTicket = await Ticket.findOne({ service: serviceId, user: userId, status: "waiting" });
+  const userTicket = await Ticket.findOne({ service: serviceId, user: userId, status: "waiting" })
+    .populate("user", "email")
+    .populate("service", "serviceName");
+    
   if (!userTicket) return { inQueue: false };
 
   const aheadCount = await Ticket.countDocuments({
@@ -73,6 +67,13 @@ export const getQueuePosition = async ({ serviceId, userId }) => {
 
   const avgServiceTime = service.avgServiceTime || 15;
   const etaMinutes = aheadCount * avgServiceTime;
+
+  // Real-time notification check
+  const ticketWithDetails = { ...userTicket.toObject(), etaMinutes, user: userTicket.user, service: userTicket.service };
+  // checkAndNotifyTravel expects the ticket with etaMinutes
+  // We need to pass the actual mongoose document for saving 'notified' flag
+  userTicket.etaMinutes = etaMinutes; 
+  await checkAndNotifyTravel(userTicket, avgServiceTime);
 
   return {
     inQueue: true,
@@ -102,8 +103,20 @@ export const serveNext = async ({ serviceId, providerId }) => {
   if (!ticket) throw new Error("No tickets waiting in queue");
 
   ticket.status = "served";
+  ticket.servedAt = new Date();
   await ticket.save();
   return ticket.populate("user", "name email");
+};
+
+export const completeTicket = async (ticketId) => {
+  const ticket = await Ticket.findById(ticketId);
+  if (!ticket) throw new Error("Ticket not found");
+  if (ticket.status !== "served") throw new Error("Only served tickets can be completed");
+
+  ticket.status = "completed";
+  ticket.completedAt = new Date();
+  await ticket.save();
+  return ticket;
 };
 
 export const getUserTickets = async (userId) => {
@@ -111,6 +124,29 @@ export const getUserTickets = async (userId) => {
     .sort({ createdAt: -1 })
     .populate("service", "serviceName description avgServiceTime location organizationId")
     .populate({ path: "service", populate: { path: "organizationId", select: "businessName" } });
+};
+
+export const transferTicket = async (ticketId, targetServiceId) => {
+  const ticket = await Ticket.findById(ticketId);
+  if (!ticket) throw new Error("Ticket not found");
+
+  const targetService = await Service.findById(targetServiceId);
+  if (!targetService) throw new Error("Target service not found");
+
+  // Atomic token assignment for new service
+  const updatedService = await Service.findByIdAndUpdate(
+    targetServiceId,
+    { $inc: { currentToken: 1 } },
+    { new: true }
+  );
+
+  ticket.service = targetServiceId;
+  ticket.tokenNumber = updatedService.currentToken;
+  ticket.status = "waiting"; // Reset to waiting in new queue
+  ticket.servedAt = null;
+  
+  await ticket.save();
+  return ticket;
 };
 
 export const getServiceStats = async (serviceId) => {

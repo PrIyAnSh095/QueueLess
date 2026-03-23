@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './AdminDashboard.css';
-import { adminListServices, adminSetServiceApproval } from "../services/api";
+import { 
+  adminListServices, 
+  adminSetServiceApproval, 
+  getAllProvidersAPI, 
+  getAllBookingsAPI,
+  approveProviderAPI,
+  rejectProviderAPI
+} from "../services/api";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -9,22 +16,30 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [services, setServices] = useState([]);
+  const [organizations, setOrganizations] = useState([]);
+  const [bookings, setBookings] = useState([]);
 
-  const fetchServices = async () => {
+  const fetchAllData = async () => {
     try {
       setLoading(true);
       setError("");
-      const res = await adminListServices();
-      setServices(res.data?.data || []);
+      const [servRes, orgRes, bookRes] = await Promise.all([
+        adminListServices(),
+        getAllProvidersAPI(),
+        getAllBookingsAPI()
+      ]);
+      setServices(servRes.data?.data || []);
+      setOrganizations(orgRes.data?.data || []);
+      setBookings(bookRes.data?.data || []);
     } catch (e) {
-      setError(e.response?.data?.message || "Failed to load services for approval");
+      setError(e.response?.data?.message || "Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchServices();
+    fetchAllData();
   }, []);
 
   const pendingServices = useMemo(
@@ -39,22 +54,7 @@ const AdminDashboard = () => {
     ];
   }, [services.length, pendingServices.length]);
 
-  const bookings = [
-    { org: 'MediCare Solutions', service: 'Home Healthcare', user: 'John Smith' },
-    { org: 'CleanPro Services', service: 'Office Cleaning', user: 'Sarah Johnson' },
-    { org: 'TechFix Ltd', service: 'Computer Repair', user: 'Mike Wilson' },
-    { org: 'GreenScape Gardens', service: 'Garden Maintenance', user: 'Emily Davis' },
-    { org: 'SecureGuard Inc', service: 'Event Security', user: 'Robert Brown' }
-  ];
 
-  const organizations = [
-    { name: 'MediCare Solutions', email: 'contact@medicare-solutions.com' },
-    { name: 'CleanPro Services', email: 'info@cleanproservices.com' },
-    { name: 'TechFix Ltd', email: 'support@techfixltd.com' },
-    { name: 'GreenScape Gardens', email: 'hello@greenscapegardens.com' },
-    { name: 'SecureGuard Inc', email: 'inquiries@secureguard.com' },
-    { name: 'PetCare Plus', email: 'care@petcareplus.com' }
-  ];
 
   const formatDate = (iso) => {
     try {
@@ -74,9 +74,23 @@ const AdminDashboard = () => {
     try {
       setError("");
       await adminSetServiceApproval(serviceId, nextStatus);
-      await fetchServices();
+      await fetchAllData();
     } catch (e) {
       setError(e.response?.data?.message || "Failed to update approval status");
+    }
+  };
+
+  const onProviderApproveReject = async (providerId, nextStatus) => {
+    try {
+      setError("");
+      if (nextStatus === "approved") {
+        await approveProviderAPI(providerId);
+      } else {
+        await rejectProviderAPI(providerId);
+      }
+      await fetchAllData();
+    } catch (e) {
+      setError(e.response?.data?.message || "Failed to update provider status");
     }
   };
 
@@ -128,7 +142,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
             </div>
-            <button className="approve" onClick={fetchServices} disabled={loading}>
+            <button className="approve" onClick={fetchAllData} disabled={loading}>
               {loading ? "Loading..." : "Retry"}
             </button>
           </div>
@@ -298,14 +312,16 @@ const AdminDashboard = () => {
                   <th>Organization</th>
                   <th>Service</th>
                   <th>User</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {bookings.map((b, i) => (
-                  <tr key={i}>
-                    <td><strong>{b.org}</strong></td>
-                    <td>{b.service}</td>
-                    <td>{b.user}</td>
+                {bookings.map((b) => (
+                  <tr key={b._id}>
+                    <td><strong>{b.service?.organizationId?.businessName || "Unknown"}</strong></td>
+                    <td>{b.service?.serviceName}</td>
+                    <td>{b.user?.name}</td>
+                    <td><span className={`badge ${b.status}`}>{b.status}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -328,14 +344,29 @@ const AdminDashboard = () => {
               <thead>
                 <tr>
                   <th>Organization</th>
-                  <th>Email</th>
+                  <th>Business Name</th>
+                  <th>Phone</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {organizations.map((o, i) => (
-                  <tr key={i}>
-                    <td><strong>{o.name}</strong></td>
-                    <td>{o.email}</td>
+                {organizations.map((o) => (
+                  <tr key={o._id}>
+                    <td><strong>{o.user?.name || "N/A"}</strong></td>
+                    <td>{o.businessName}</td>
+                    <td>{o.phone}</td>
+                    <td><span className={`badge ${o.status}`}>{o.status}</span></td>
+                    <td>
+                      {o.status === "pending" ? (
+                        <div className="actions">
+                          <button className="approve" onClick={() => onProviderApproveReject(o._id, "approved")}>✓</button>
+                          <button className="reject" onClick={() => onProviderApproveReject(o._id, "rejected")}>✕</button>
+                        </div>
+                      ) : (
+                        <span className="no-action">-</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

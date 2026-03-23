@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getServices } from '../services/api'
+import { getServices, getGlobalStatsAPI, getTrendingServicesAPI } from '../services/api'
 import './HomePage.css'
 
 const HomePage = () => {
   const [isVisible, setIsVisible] = useState(false)
   const [services, setServices] = useState([])
+  const [stats, setStats] = useState({ totalTickets: '0', totalServices: '0', totalProviders: '0' })
+  const [trending, setTrending] = useState([])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -16,12 +18,18 @@ const HomePage = () => {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await getServices()
-        if (!cancelled && res.data?.success) {
-          setServices(res.data.data || [])
+        const [servRes, statsRes, trendRes] = await Promise.all([
+          getServices(),
+          getGlobalStatsAPI(),
+          getTrendingServicesAPI()
+        ])
+        if (!cancelled) {
+          if (servRes.data?.success) setServices(servRes.data.data || [])
+          if (statsRes.data?.success) setStats(statsRes.data.data)
+          if (trendRes.data?.success) setTrending(trendRes.data.data)
         }
-      } catch {
-        if (!cancelled) setServices([])
+      } catch (err) {
+        console.error(err)
       }
     })()
     return () => {
@@ -74,16 +82,16 @@ const HomePage = () => {
             </div>
             <div className="hero-stats">
               <div className="stat-item">
-                <div className="stat-number">10K+</div>
-                <div className="stat-label">Active Users</div>
+                <div className="stat-number">{stats.totalTickets}+</div>
+                <div className="stat-label">Tickets Issued</div>
               </div>
               <div className="stat-item">
-                <div className="stat-number">500+</div>
+                <div className="stat-number">{stats.totalProviders}+</div>
                 <div className="stat-label">Organizations</div>
               </div>
               <div className="stat-item">
-                <div className="stat-number">50K+</div>
-                <div className="stat-label">Bookings</div>
+                <div className="stat-number">{stats.totalServices}+</div>
+                <div className="stat-label">Services</div>
               </div>
             </div>
           </div>
@@ -230,12 +238,12 @@ const HomePage = () => {
             </p>
           </div>
           <div className="services-grid">
-            {services.length === 0 ? (
+            {trending.length === 0 ? (
               <p className="section-subtitle" style={{ gridColumn: '1 / -1' }}>
-                Popular services will appear here once organizations publish them.
+                Popular services will appear here based on recent traffic.
               </p>
             ) : (
-              services.slice(0, 4).map((item, index) => (
+              trending.slice(0, 4).map((item, index) => (
                 <div
                   key={item._id}
                   role="button"
@@ -252,9 +260,9 @@ const HomePage = () => {
                   </div>
                   <h3 className="service-preview-title">{item.serviceName}</h3>
                   <p className="service-preview-description">
-                    {item.description || `Book with ${item.organizationName || 'this organization'}`}
+                    {item.description || "Trending service"}
                   </p>
-                  {index === 0 ? <div className="service-preview-badge">Featured</div> : null}
+                  {index === 0 ? <div className="service-preview-badge">Trending</div> : null}
                 </div>
               ))
             )}

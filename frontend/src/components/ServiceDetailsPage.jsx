@@ -62,12 +62,7 @@ function serviceInitials(name) {
   return String(name).slice(0, 2).toUpperCase();
 }
 
-const SERVICE_FEATURES = [
-  'Fast processing',
-  'Online status tracking',
-  'SMS notifications',
-  'Digital receipt'
-];
+
 
 const ServiceDetailsPage = () => {
   const { id } = useParams();
@@ -145,8 +140,18 @@ const ServiceDetailsPage = () => {
       try {
         setLoading(true);
         setError('');
+        let userCoords = '';
+        if ('geolocation' in navigator) {
+          try {
+            const pos = await new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject);
+            });
+            userCoords = `?userLat=${pos.coords.latitude}&userLng=${pos.coords.longitude}`;
+          } catch {}
+        }
+
         const [serviceRes, queueRes] = await Promise.all([
-          getServiceById(id),
+          getServiceById(id + userCoords),
           user ? getQueuePositionAPI(id) : Promise.resolve({ data: { data: { inQueue: false } } })
         ]);
 
@@ -325,18 +330,32 @@ const ServiceDetailsPage = () => {
                 <span className="sd-stat-label">Location</span>
                 <span className="sd-stat-value sd-stat-value-multiline">
                   {orgAddress || 'Address not provided'}
+                  {service.distance != null && (
+                    <div style={{fontSize: '0.8em', color: '#7c3aed', marginTop: '4px'}}>
+                      {service.distance} km away
+                    </div>
+                  )}
                 </span>
               </div>
             </div>
 
             <section className="sd-panel">
-              <h2 className="sd-panel-title">Required Documents</h2>
-              {requiredDocs.length > 0 ? (
-                <ul className="sd-doc-list">
-                  {requiredDocs.map((doc) => (
-                    <li key={doc}>{doc}</li>
-                  ))}
-                </ul>
+              <h2 className="sd-panel-title">Required Documents & Info</h2>
+              {requiredDocs.length > 0 || service.additionalRequirements ? (
+                <>
+                  {requiredDocs.length > 0 && (
+                    <ul className="sd-doc-list" style={{marginBottom: service.additionalRequirements ? '10px' : '0'}}>
+                      {requiredDocs.map((doc) => (
+                        <li key={doc}>{doc}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {service.additionalRequirements && (
+                    <div className="sd-additional-info" style={{padding: '10px', background: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #7c3aed'}}>
+                       <p style={{fontSize: '0.9em', color: '#475569'}}>{service.additionalRequirements}</p>
+                    </div>
+                  )}
+                </>
               ) : (
                 <p className="sd-panel-muted">No documents listed for this service.</p>
               )}
@@ -345,12 +364,16 @@ const ServiceDetailsPage = () => {
             <section className="sd-panel">
               <h2 className="sd-panel-title">Service Features</h2>
               <div className="sd-features-grid">
-                {SERVICE_FEATURES.map((item) => (
-                  <div key={item} className="sd-feature-row">
-                    <CheckCircle2 size={18} strokeWidth={2.5} className="sd-feature-check" aria-hidden />
-                    <span>{item}</span>
-                  </div>
-                ))}
+                {(service.features && service.features.length > 0) ? (
+                   service.features.map((item) => (
+                    <div key={item} className="sd-feature-row">
+                      <CheckCircle2 size={18} strokeWidth={2.5} className="sd-feature-check" aria-hidden />
+                      <span>{item}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="sd-panel-muted">No specific features listed.</p>
+                )}
               </div>
             </section>
 

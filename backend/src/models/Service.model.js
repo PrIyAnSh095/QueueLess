@@ -16,12 +16,24 @@ const serviceSchema = new mongoose.Schema(
       type: String,
       trim: true
     },
+    features: {
+      type: [String],
+      default: []
+    },
+    additionalRequirements: {
+      type: String,
+      trim: true
+    },
     duration: {
       type: Number
     },
     avgServiceTime: {
       type: Number,
       default: 15
+    },
+    currentToken: {
+      type: Number,
+      default: 0
     },
     maxTokens: {
       type: Number
