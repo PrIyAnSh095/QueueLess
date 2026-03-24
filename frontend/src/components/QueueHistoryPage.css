@@ -1,0 +1,42 @@
+.qh-page { min-height: 100vh; background: #0f172a; padding: 80px 20px 60px; }
+.qh-container { max-width: 900px; margin: 0 auto; }
+.qh-header { margin-bottom: 24px; }
+.qh-header h1 { color: #f1f5f9; font-size: 28px; margin: 0 0 6px; }
+.qh-header p { color: #94a3b8; font-size: 15px; margin: 0; }
+.qh-filters { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+.qh-filter-btn {
+  background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+  color: #94a3b8; padding: 8px 18px; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s; font-family: inherit;
+}
+.qh-filter-btn.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+.qh-filter-btn:hover:not(.active) { border-color: #7c3aed; color: #a78bfa; }
+.qh-empty { text-align: center; color: #64748b; padding: 60px 20px; }
+.qh-list { display: flex; flex-direction: column; gap: 10px; }
+.qh-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #1e293b; border: 1px solid rgba(148,163,184,0.08); border-radius: 12px;
+  padding: 16px 20px; transition: border-color 0.2s;
+}
+.qh-item:hover { border-color: rgba(148,163,184,0.2); }
+.qh-item-left { display: flex; align-items: center; gap: 14px; }
+.qh-item-token {
+  width: 42px; height: 42px; border-radius: 10px; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; flex-shrink: 0;
+}
+.qh-item-service { color: #f1f5f9; font-weight: 600; font-size: 15px; }
+.qh-item-org { color: #94a3b8; font-size: 13px; }
+.qh-item-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.qh-item-status { font-weight: 600; font-size: 13px; text-transform: capitalize; }
+.qh-item-date { color: #64748b; font-size: 12px; }
+.qh-delay-btn {
+  background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: background 0.2s; white-space: nowrap;
+}
+.qh-delay-btn:hover { background: rgba(239,68,68,0.2); }
+@media (max-width: 640px) {
+  .qh-item { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .qh-item-right { width: 100%; justify-content: space-between; }
+}

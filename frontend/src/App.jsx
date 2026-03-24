@@ -15,6 +15,12 @@ import MyTicketsPage from './components/MyTicketsPage'
 import Header from './layout/Header'
 import Footer from './layout/Footer'
 import ScrollToHash from './utils/ScrollToHash'
+import ForgotPasswordPage from './components/ForgotPasswordPage'
+import AllServicesPage from './components/AllServicesPage'
+import AllOrganizationsPage from './components/AllOrganizationsPage'
+import OrganizationDetailsPage from './components/OrganizationDetailsPage'
+import UserDashboard from './components/UserDashboard'
+import QueueHistoryPage from './components/QueueHistoryPage'
 
 function App() {
   return (
@@ -25,54 +31,29 @@ function App() {
           <ScrollToHash />
           <main className="app-main">
             <Routes>
+              {/* Public */}
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/service-details/:id" element={<ServiceDetailsPage />} />
               <Route path="/service-details" element={<ServiceDetailsPage />} />
 
-              <Route
-                path="/my-tickets"
-                element={
-                  <ProtectedRoute>
-                    <MyTicketsPage />
-                  </ProtectedRoute>
-                }
-              />
+              {/* User Protected */}
+              <Route path="/user-dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
+              <Route path="/my-tickets" element={<ProtectedRoute><MyTicketsPage /></ProtectedRoute>} />
+              <Route path="/services" element={<ProtectedRoute><AllServicesPage /></ProtectedRoute>} />
+              <Route path="/organizations" element={<ProtectedRoute><AllOrganizationsPage /></ProtectedRoute>} />
+              <Route path="/organizations/:id" element={<ProtectedRoute><OrganizationDetailsPage /></ProtectedRoute>} />
+              <Route path="/queue-history" element={<ProtectedRoute><QueueHistoryPage /></ProtectedRoute>} />
 
-              <Route
-                path="/service-provider"
-                element={
-                  <ProtectedRoute requiredRole="provider">
-                    <ServiceProviderPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/service-provider/create-service"
-                element={
-                  <ProtectedRoute requiredRole="provider">
-                    <CreateService />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Provider Protected */}
+              <Route path="/service-provider" element={<ProtectedRoute requiredRole="provider"><ServiceProviderPage /></ProtectedRoute>} />
+              <Route path="/service-provider/create-service" element={<ProtectedRoute requiredRole="provider"><CreateService /></ProtectedRoute>} />
 
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/add-sub-admin"
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <SubAdminPage />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Admin Protected */}
+              <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/add-sub-admin" element={<ProtectedRoute requiredRole="admin"><SubAdminPage /></ProtectedRoute>} />
             </Routes>
           </main>
           <Footer />

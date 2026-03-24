@@ -14,7 +14,28 @@ const serviceProviderSchema = new mongoose.Schema({
     trim: true
   },
 
+  ownerName: {
+    type: String,
+    trim: true
+  },
+
   phone: {
+    type: String,
+    trim: true
+  },
+
+  contactNumber: {
+    type: String,
+    trim: true
+  },
+
+  alternateEmail: {
+    type: String,
+    trim: true,
+    lowercase: true
+  },
+
+  description: {
     type: String,
     trim: true
   },
@@ -29,10 +50,24 @@ const serviceProviderSchema = new mongoose.Schema({
     lng: { type: Number }
   },
 
+  verificationDocument: {
+    type: String // Cloudinary URL
+  },
+
+  images: {
+    type: [String], // Cloudinary URLs
+    default: []
+  },
+
   status: {
     type: String,
     enum: ["pending", "approved", "rejected"],
     default: "pending"
+  },
+
+  disableSmartWaitTime: {
+    type: Boolean,
+    default: false
   }
 
 }, { timestamps: true });

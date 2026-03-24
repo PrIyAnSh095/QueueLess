@@ -1,0 +1,30 @@
+.all-services-page { min-height: 100vh; background: #0f172a; padding: 80px 20px 60px; }
+.asp-container { max-width: 1200px; margin: 0 auto; }
+.asp-header { margin-bottom: 28px; }
+.asp-header h1 { color: #f1f5f9; font-size: 32px; margin: 0 0 8px; }
+.asp-header p { color: #94a3b8; font-size: 16px; margin: 0; }
+.asp-search-row { margin-bottom: 28px; }
+.asp-empty { text-align: center; color: #64748b; padding: 60px 20px; }
+.asp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.asp-card {
+  background: #1e293b; border: 1px solid rgba(148,163,184,0.1); border-radius: 14px;
+  padding: 24px; cursor: pointer; transition: border-color 0.2s, transform 0.2s;
+}
+.asp-card:hover { border-color: #7c3aed; transform: translateY(-2px); }
+.asp-card-top { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.asp-avatar {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px; flex-shrink: 0;
+}
+.asp-org-name { color: #94a3b8; font-size: 12px; font-weight: 500; }
+.asp-service-name { color: #f1f5f9; font-size: 16px; font-weight: 600; }
+.asp-desc { color: #94a3b8; font-size: 14px; line-height: 1.5; margin: 0 0 12px; }
+.asp-meta { color: #64748b; font-size: 13px; margin-bottom: 16px; }
+.asp-book-btn {
+  width: 100%; background: rgba(124,58,237,0.12); color: #a78bfa; border: 1px solid rgba(124,58,237,0.2);
+  border-radius: 8px; padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background 0.2s;
+}
+.asp-book-btn:hover { background: rgba(124,58,237,0.2); }

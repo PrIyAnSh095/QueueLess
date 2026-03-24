@@ -1,5 +1,7 @@
 import Ticket from "../models/ticket.model.js";
 import Service from "../models/Service.model.js";
+import QueueHistory from "../models/QueueHistory.model.js";
+import ServiceProvider from "../models/ServiceProvider.model.js";
 import mongoose from "mongoose";
 
 export const joinQueue = async ({ serviceId, userId, userLocation, scheduledStart }) => {
@@ -55,6 +57,21 @@ export const leaveQueue = async ({ ticketId, userId }) => {
 
   ticket.status = "cancelled";
   await ticket.save();
+
+  // Save to history
+  const service = await Service.findById(ticket.service);
+  await QueueHistory.create({
+    user: userId,
+    service: ticket.service,
+    organization: service?.organizationId,
+    ticket: ticket._id,
+    tokenNumber: ticket.tokenNumber,
+    joinTime: ticket.createdAt,
+    cancelledTime: new Date(),
+    scheduledStart: ticket.scheduledStart,
+    status: "cancelled"
+  });
+
   return ticket;
 };
 
@@ -103,6 +120,23 @@ export const serveNext = async ({ serviceId, providerId }) => {
 
   ticket.status = "served";
   await ticket.save();
+
+  // Save to history with actual wait duration
+  const servedTime = new Date();
+  const actualWaitDuration = Math.round((servedTime - ticket.createdAt) / 60000);
+  await QueueHistory.create({
+    user: ticket.user,
+    service: serviceId,
+    organization: service.organizationId._id,
+    ticket: ticket._id,
+    tokenNumber: ticket.tokenNumber,
+    joinTime: ticket.createdAt,
+    servedTime,
+    actualWaitDuration,
+    scheduledStart: ticket.scheduledStart,
+    status: "served"
+  });
+
   return ticket.populate("user", "name email");
 };
 
@@ -121,5 +155,27 @@ export const getServiceStats = async (serviceId) => {
     Ticket.countDocuments({ service: serviceId, status: "cancelled" })
   ]);
 
-  return { totalBookings, waiting, served, cancelled };
+  // Compute average wait time from history
+  const historyStats = await QueueHistory.aggregate([
+    { $match: { service: new mongoose.Types.ObjectId(serviceId), status: "served", actualWaitDuration: { $exists: true } } },
+    { $group: { _id: null, avgWait: { $avg: "$actualWaitDuration" } } }
+  ]);
+  const avgWaitTime = historyStats.length > 0 ? Math.round(historyStats[0].avgWait) : null;
+
+  return { totalBookings, waiting, served, cancelled, avgWaitTime };
+};
+
+export const reportDelay = async (ticketId, userId) => {
+  const ticket = await Ticket.findById(ticketId);
+  if (!ticket) throw new Error("Ticket not found");
+  if (ticket.user.toString() !== userId.toString()) throw new Error("Not authorized");
+
+  // Flag in history
+  await QueueHistory.findOneAndUpdate(
+    { ticket: ticketId },
+    { delayReported: true, orgFlagged: true },
+    { new: true }
+  );
+
+  return { message: "Delay reported. The organization has been flagged for review." };
 };

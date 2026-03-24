@@ -3,6 +3,8 @@ import ServiceProvider from "../models/ServiceProvider.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import axios from "axios";
+import { createOTP, verifyOTP } from "../services/otp.service.js";
+import { sendOTPEmail } from "../services/email.service.js";
 
 const signToken = (user) =>
   jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
@@ -145,9 +147,136 @@ export const getMe = async (req, res) => {
     let providerProfile = null;
     if (user.role === "provider") {
       providerProfile = await ServiceProvider.findOne({ user: user._id });
+      // BUG FIX: Auto-create provider profile if it's missing
+      if (!providerProfile) {
+        providerProfile = await ServiceProvider.create({
+          user: user._id,
+          businessName: user.name + "'s Organization",
+          phone: user.phone || "",
+          status: "pending"
+        });
+      }
     }
 
     return res.status(200).json({ user, providerProfile });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Don't reveal if user exists
+      return res.json({ message: "If this email is registered, you will receive an OTP." });
+    }
+
+    const otp = await createOTP(email, "forgot-password");
+    await sendOTPEmail(email, otp, "forgot-password");
+
+    return res.json({ message: "If this email is registered, you will receive an OTP." });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: "Email, OTP, and new password are required" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters" });
+    }
+
+    const result = await verifyOTP(email, otp, "forgot-password");
+    if (!result.valid) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    return res.json({ message: "Password reset successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current and new passwords are required" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "New password must be at least 8 characters" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user || !user.password) {
+      return res.status(400).json({ message: "Cannot change password for OAuth accounts" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    return res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const changePasswordByAdmin = async (req, res) => {
+  try {
+    const { userId, otp, newPassword } = req.body;
+    if (!userId || !newPassword) {
+      return res.status(400).json({ message: "User ID and new password are required" });
+    }
+
+    const targetUser = await User.findById(userId);
+    if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+    // Verify OTP sent to the counter/target user's email
+    if (otp) {
+      const result = await verifyOTP(targetUser.email, otp, "change-password");
+      if (!result.valid) {
+        return res.status(400).json({ message: "Invalid or expired OTP" });
+      }
+    }
+
+    targetUser.password = await bcrypt.hash(newPassword, 10);
+    await targetUser.save();
+
+    return res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const sendChangePasswordOTP = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const targetUser = await User.findById(userId || req.user._id);
+    if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+    const otp = await createOTP(targetUser.email, "change-password");
+    await sendOTPEmail(targetUser.email, otp, "change-password");
+
+    return res.json({ message: "OTP sent to user's email" });
   } catch (error) {
     return res.status(500).json({ message: "Server error" });
   }
@@ -205,9 +334,11 @@ export const googleOAuthCallback = async (req, res) => {
     const token = signToken(user);
     setCookie(res, token);
 
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const redirect = user.role === "provider" ? "/service-provider" : user.role === "admin" ? "/admin" : "/";
-    res.redirect(`http://localhost:5173${redirect}`);
+    res.redirect(`${frontendUrl}${redirect}`);
   } catch (error) {
-    res.redirect("http://localhost:5173/login?error=oauth_failed");
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    res.redirect(`${frontendUrl}/login?error=oauth_failed`);
   }
 };
