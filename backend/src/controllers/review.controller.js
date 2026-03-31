@@ -40,19 +40,19 @@ export const createReview = async (req, res) => {
 
     const existing = await Review.findOne({ user: req.user._id, targetType, targetId });
     
-    let imageUrls = existing ? existing.images : [];
+    let imagesData = existing ? existing.images : [];
     if (req.files && req.files.length > 0) {
       const uploadPromises = req.files.map(file => 
         uploadToCloudinary(file.buffer, "queueless/reviews")
       );
       const newImages = await Promise.all(uploadPromises);
-      imageUrls = [...imageUrls, ...newImages];
+      imagesData = [...imagesData, ...newImages];
     }
 
     if (existing) {
       existing.rating = rating;
       existing.comment = comment || existing.comment;
-      existing.images = imageUrls;
+      existing.images = imagesData;
       await existing.save();
       return res.json({ success: true, data: existing });
     }
@@ -63,7 +63,7 @@ export const createReview = async (req, res) => {
       targetId,
       rating: Number(rating),
       comment,
-      images: imageUrls
+      images: imagesData
     });
 
     return res.status(201).json({ success: true, data: review });

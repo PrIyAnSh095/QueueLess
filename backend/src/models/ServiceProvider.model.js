@@ -65,7 +65,10 @@ const serviceProviderSchema = new mongoose.Schema({
   },
 
   images: {
-    type: [String], // Cloudinary URLs
+    type: [{
+      url: { type: String, required: true },
+      public_id: { type: String, required: true }
+    }],
     default: []
   },
 

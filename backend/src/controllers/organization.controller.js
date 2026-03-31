@@ -34,6 +34,16 @@ export const getMyOrgProfile = async (req, res) => {
 export const updateMyOrgProfile = async (req, res) => {
   try {
     const { businessName, phone, address, ownerName, alternateEmail, contactNumber, description, location, photoProof } = req.body;
+    let { images } = req.body;
+
+    // Robust parsing for images if passed as a JSON string (Multipart/Form-Data common case)
+    if (typeof images === "string") {
+      try {
+        images = JSON.parse(images);
+      } catch (parseErr) {
+        console.warn("⚠️ Failed to parse images as JSON, treating as literal string (will likely fail validation)");
+      }
+    }
     const orgId = await resolveOrgId(req.user);
     const org = orgId ? await ServiceProvider.findById(orgId) : null;
     if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
@@ -63,6 +73,7 @@ export const updateMyOrgProfile = async (req, res) => {
     if (contactNumber) org.contactNumber = contactNumber;
     if (description) org.description = description;
     if (location) org.location = location;
+    if (Array.isArray(images)) org.images = images;
 
     await org.save();
     return res.json({ success: true, data: org });
@@ -126,13 +137,13 @@ export const uploadOrgImages = async (req, res) => {
     const org = await ServiceProvider.findOne({ user: req.user._id });
     if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
 
-    const urls = [];
+    const results = [];
     for (const file of req.files) {
-      const url = await uploadToCloudinary(file.buffer, "queueless/org-images");
-      urls.push(url);
+      const result = await uploadToCloudinary(file.buffer, "queueless/org-images");
+      results.push(result);
     }
 
-    org.images = [...(org.images || []), ...urls];
+    org.images = [...(org.images || []), ...results];
     await org.save();
     return res.json({ success: true, images: org.images });
   } catch (err) {

@@ -6,7 +6,13 @@ const reviewSchema = new mongoose.Schema({
   targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
   rating: { type: Number, required: true, min: 1, max: 5 },
   comment: { type: String, trim: true, maxlength: 1000 },
-  images: { type: [String], default: [] }
+  images: {
+    type: [{
+      url: { type: String, required: true },
+      public_id: { type: String, required: true }
+    }],
+    default: []
+  }
 }, { timestamps: true });
 
 reviewSchema.index({ targetType: 1, targetId: 1 });
