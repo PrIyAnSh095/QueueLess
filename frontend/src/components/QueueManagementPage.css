@@ -1,0 +1,255 @@
+.queue-management-page {
+  padding: 2rem;
+  background: #020617;
+  min-height: 100vh;
+  color: #f1f5f9;
+}
+
+.qm-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.qm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 2rem;
+  border-radius: 1.5rem;
+  border: 1px solid #1e293b;
+  backdrop-filter: blur(10px);
+}
+
+.qm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.qm-icon {
+  width: 48px;
+  height: 48px;
+  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+  padding: 0.75rem;
+  border-radius: 1rem;
+}
+
+.qm-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.qm-header p {
+  color: #94a3b8;
+  font-size: 1rem;
+}
+
+.btn-refresh-qm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #f1f5f9;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-refresh-qm:hover {
+  background: #2d3e50;
+  border-color: #475569;
+}
+
+.qm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.qm-card {
+  background: #0f172a;
+  border-radius: 1.25rem;
+  border: 1px solid #1e293b;
+  padding: 1.75rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.qm-card:hover {
+  transform: translateY(-5px);
+  border-color: #334155;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.qm-card.on-break {
+  opacity: 0.8;
+  border-color: #ef4444;
+}
+
+.qm-card-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.q-info h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.q-service-label {
+  font-size: 0.875rem;
+  color: #8b5cf6;
+  font-weight: 500;
+}
+
+.qm-break-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #1e293b;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  padding: 0.5rem 1rem;
+  border-radius: 0.6rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qm-break-btn.active {
+  background: #ef4444;
+  color: white;
+}
+
+.q-current-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.stat-box {
+  background: rgba(30, 41, 59, 0.5);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.s-lbl {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.s-val {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.q-waiting-list {
+  background: #1e293b;
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.list-hdr {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.tokens-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.token-pill {
+  background: #0f172a;
+  color: #8b5cf6;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.no-tokens {
+  color: #64748b;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+.btn-serve-qm {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.btn-serve-qm:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
+}
+
+.btn-serve-qm:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-serve-qm:disabled {
+  background: #1e293b;
+  color: #475569;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.qm-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 5rem;
+  background: #0f172a;
+  border-radius: 2rem;
+  border: 2px dashed #1e293b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .qm-header {
+     flex-direction: column;
+     gap: 1.5rem;
+     text-align: center;
+  }
+}

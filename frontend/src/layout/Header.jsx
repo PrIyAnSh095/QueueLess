@@ -54,6 +54,7 @@ const Header = () => {
           {isAdmin ? (
             <>
               <Link to="/admin" className="nav-link" onClick={closeMenu}>Dashboard</Link>
+              <Link to="/admin/update-requests" className="nav-link" onClick={closeMenu}>Update Requests</Link>
               <Link to="/services" className="nav-link" onClick={closeMenu}>Services</Link>
               <Link to="/organizations" className="nav-link" onClick={closeMenu}>Organizations</Link>
             </>
@@ -61,7 +62,14 @@ const Header = () => {
             <>
               <Link to="/service-provider" className="nav-link" onClick={closeMenu}>Dashboard</Link>
               <Link to="/service-provider/create-service" className="nav-link" onClick={closeMenu}>Add Service</Link>
-              <Link to="/services" className="nav-link" onClick={closeMenu}>All Services</Link>
+            </>
+          ) : user?.role === 'counter' ? (
+            <>
+              <Link to="/counter-dashboard" className="nav-link" onClick={closeMenu}>Dashboard</Link>
+            </>
+          ) : user?.role === 'reception' ? (
+            <>
+              <Link to="/reception-dashboard" className="nav-link" onClick={closeMenu}>Dashboard</Link>
             </>
           ) : user ? (
             <>

@@ -4,6 +4,7 @@ import { getMyTicketsAPI, getNotificationsAPI } from '../services/api';
 import { useAuth } from '../utils/AuthContext';
 import ChangePasswordModal from './ChangePasswordModal';
 import { SkeletonGrid } from './Skeleton';
+import { useAdminSocket } from '../utils/useSocket';
 import './UserDashboard.css';
 
 const UserDashboard = () => {
@@ -14,20 +15,36 @@ const UserDashboard = () => {
   const [unread, setUnread] = useState(0);
   const [showPwModal, setShowPwModal] = useState(false);
 
+  const fetchData = React.useCallback(async (isPolling = false) => {
+    try {
+      if (!isPolling) setLoading(true);
+      const [ticketRes, notifRes] = await Promise.all([
+        getMyTicketsAPI(),
+        getNotificationsAPI().catch(() => ({ data: { data: { unreadCount: 0 } } }))
+      ]);
+      setTickets(ticketRes.data?.data || []);
+      setUnread(notifRes.data?.data?.unreadCount || 0);
+    } catch (err) {
+      console.error("Dashboard polling error:", err);
+    } finally {
+      if (!isPolling) setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
-    (async () => {
-      try {
-        const [ticketRes, notifRes] = await Promise.all([
-          getMyTicketsAPI(),
-          getNotificationsAPI().catch(() => ({ data: { data: { unreadCount: 0 } } }))
-        ]);
-        setTickets(ticketRes.data?.data || []);
-        setUnread(notifRes.data?.data?.unreadCount || 0);
-      } catch {}
-      finally { setLoading(false); }
-    })();
-  }, [user, navigate]);
+    fetchData();
+
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 30000); // 30s polling
+
+    return () => clearInterval(interval);
+  }, [user, navigate, fetchData]);
+
+  useAdminSocket(() => {
+    fetchData(true);
+  });
 
   if (!user) return null;
 
@@ -88,21 +105,37 @@ const UserDashboard = () => {
           </button>
         </div>
 
-        {loading ? <SkeletonGrid count={3} lines={2} /> : activeTickets.length > 0 && (
+        {loading ? <SkeletonGrid count={3} lines={2} /> : (
           <div className="ud-active-section">
-            <h2>Active Bookings</h2>
-            <div className="ud-ticket-grid">
-              {activeTickets.slice(0, 6).map(t => (
-                <div key={t._id} className="ud-ticket-card" onClick={() => navigate('/my-tickets')}>
-                  <div className="ud-ticket-header">
-                    <span className="ud-ticket-service">{t.service?.serviceName || 'Service'}</span>
-                    <span className="ud-ticket-token">#{t.tokenNumber}</span>
-                  </div>
-                  <div className="ud-ticket-org">{t.service?.organizationId?.businessName || ''}</div>
-                  <div className="ud-ticket-meta">{new Date(t.createdAt).toLocaleString()}</div>
-                </div>
-              ))}
+            <div className="ud-section-header">
+              <h2>Active Bookings</h2>
+              {activeTickets.length === 0 && (
+                <button className="ud-join-btn" onClick={() => navigate('/services')}>
+                  + Join a Queue
+                </button>
+              )}
             </div>
+            {activeTickets.length > 0 ? (
+              <div className="ud-ticket-grid">
+                {activeTickets.slice(0, 6).map(t => (
+                  <div key={t._id} className="ud-ticket-card" onClick={() => navigate('/my-tickets')}>
+                    <div className="ud-ticket-header">
+                      <span className="ud-ticket-service">{t.service?.serviceName || 'Service'}</span>
+                      <span className="ud-ticket-token">#{t.tokenNumber}</span>
+                    </div>
+                    <div className="ud-ticket-org">{t.service?.organizationId?.businessName || ''}</div>
+                    <div className="ud-ticket-eta">
+                      <span>ETA: {t.service?.avgServiceTime ? `${t.service.avgServiceTime}m` : 'Wait: --'}</span>
+                      <span>{new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="ud-empty-placeholder">
+                <p>You have no active bookings at the moment.</p>
+              </div>
+            )}
           </div>
         )}
       </div>

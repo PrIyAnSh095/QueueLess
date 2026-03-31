@@ -1,5 +1,5 @@
 import Ticket from "../models/ticket.model.js";
-import Service from "../models/Service.model.js";
+import Queue from "../models/queue.model.js";
 import mongoose from "mongoose";
 
 const DEFAULT_INTERVAL = 30;
@@ -31,9 +31,6 @@ function dateKeyLocal(d) {
   return `${y}-${m}-${day}`;
 }
 
-/**
- * Returns calendar dates (YYYY-MM-DD strings) from today for `horizon` days that are working days.
- */
 export function getBookableDateKeys(horizonDays, workingDays) {
   const horizon = Number.isFinite(horizonDays) ? horizonDays : DEFAULT_HORIZON;
   const days = Array.isArray(workingDays) && workingDays.length ? workingDays : DEFAULT_WORKING_DAYS;
@@ -48,33 +45,31 @@ export function getBookableDateKeys(horizonDays, workingDays) {
   return out;
 }
 
-/**
- * List available slot start times for a service on a given date (YYYY-MM-DD).
- */
-export async function getAvailableSlotsForService(serviceId, dateStr) {
-  if (!mongoose.Types.ObjectId.isValid(serviceId)) {
-    throw new Error("Invalid serviceId");
+export async function getAvailableSlotsForService(queueId, dateStr) {
+  if (!mongoose.Types.ObjectId.isValid(queueId)) {
+    throw new Error("Invalid queueId");
   }
 
-  const service = await Service.findOne({
-    _id: serviceId,
-    approvalStatus: "approved",
-    status: true
-  });
-  if (!service) throw new Error("Service not found");
+  const queue = await Queue.findById(queueId).populate("serviceId");
+  if (!queue) throw new Error("Queue not found");
+  
+  const service = queue.serviceId;
+  if (!service || !service.status || service.approvalStatus !== "approved") {
+    throw new Error("Service is currently unavailable");
+  }
 
-  const open = service.openTime || DEFAULT_OPEN;
-  const close = service.closeTime || DEFAULT_CLOSE;
-  const interval = service.slotIntervalMinutes || DEFAULT_INTERVAL;
-  const workingDays = Array.isArray(service.workingDays) && service.workingDays.length
-    ? service.workingDays
+  const open = queue.openTime || DEFAULT_OPEN;
+  const close = queue.closeTime || DEFAULT_CLOSE;
+  const interval = queue.slotIntervalMinutes || DEFAULT_INTERVAL;
+  const workingDays = Array.isArray(queue.workingDays) && queue.workingDays.length
+    ? queue.workingDays
     : DEFAULT_WORKING_DAYS;
-  const maxPerSlot = service.maxTokens != null && service.maxTokens > 0 ? service.maxTokens : 10;
+  const maxPerSlot = queue.capacity > 0 ? queue.capacity : 10;
 
   const openMin = parseTimeToMinutes(open);
   const closeMin = parseTimeToMinutes(close);
   if (openMin == null || closeMin == null || closeMin <= openMin) {
-    throw new Error("Invalid service hours");
+    throw new Error("Invalid queue hours");
   }
 
   const parts = String(dateStr).split("-").map(Number);
@@ -102,7 +97,7 @@ export async function getAvailableSlotsForService(serviceId, dateStr) {
     return { date: dateStr, slots: [] };
   }
 
-  const horizon = service.bookingHorizonDays ?? DEFAULT_HORIZON;
+  const horizon = DEFAULT_HORIZON; // Can add to service/queue if needed
   const maxDay = new Date(todayStart);
   maxDay.setDate(maxDay.getDate() + Math.max(0, horizon - 1));
   if (selectedStart > maxDay) {
@@ -110,8 +105,10 @@ export async function getAvailableSlotsForService(serviceId, dateStr) {
   }
 
   const slots = [];
+  const now = new Date();
   for (let t = openMin; t < closeMin; t += interval) {
     const slotStart = buildLocalDate(y, mo, d, t);
+    // If today, skip slots in the past
     if (selectedStart.getTime() === todayStart.getTime() && slotStart <= now) {
       continue;
     }
@@ -121,7 +118,7 @@ export async function getAvailableSlotsForService(serviceId, dateStr) {
     }
 
     const booked = await Ticket.countDocuments({
-      service: serviceId,
+      queue: queueId,
       status: "waiting",
       scheduledStart: slotStart
     });

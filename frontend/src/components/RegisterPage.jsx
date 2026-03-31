@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import './RegisterPage.css'
 import { registerUser } from "../services/api";
 import { useNavigate, Link } from 'react-router-dom';
+import { Upload } from 'lucide-react';
 
 const generatePassword = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
@@ -14,14 +15,15 @@ const LocationPicker = ({ onLocationSelect }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
 
   useEffect(() => {
     if (mapInstanceRef.current) return;
 
     import('leaflet').then((L) => {
       const leaflet = L.default;
-
-      import('leaflet/dist/leaflet.css').catch(() => {});
+      import('leaflet/dist/leaflet.css').catch(() => { });
 
       delete leaflet.Icon.Default.prototype._getIconUrl;
       leaflet.Icon.Default.mergeOptions({
@@ -37,9 +39,7 @@ const LocationPicker = ({ onLocationSelect }) => {
 
       map.on('click', (e) => {
         const { lat, lng } = e.latlng;
-        if (markerRef.current) markerRef.current.setLatLng([lat, lng]);
-        else markerRef.current = leaflet.marker([lat, lng]).addTo(map);
-        onLocationSelect({ lat, lng });
+        updateMarker(lat, lng, map, leaflet);
       });
 
       mapInstanceRef.current = map;
@@ -53,10 +53,61 @@ const LocationPicker = ({ onLocationSelect }) => {
     };
   }, []);
 
+  const updateMarker = (lat, lng, map, leaflet) => {
+    if (markerRef.current) markerRef.current.setLatLng([lat, lng]);
+    else markerRef.current = leaflet.marker([lat, lng]).addTo(map);
+    map.setView([lat, lng], 15);
+    onLocationSelect({ lat, lng });
+  };
+
+  const handleSearch = async (val) => {
+    setSearchQuery(val);
+    if (val.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(val)}&limit=5`);
+      const data = await res.json();
+      setSuggestions(data.features || []);
+    } catch {
+      setSuggestions([]);
+    }
+  };
+
+  const selectSuggestion = (feature) => {
+    const [lng, lat] = feature.geometry.coordinates;
+    const name = feature.properties.name || feature.properties.city || 'Selected Location';
+    setSearchQuery(name);
+    setSuggestions([]);
+
+    import('leaflet').then((L) => {
+      updateMarker(lat, lng, mapInstanceRef.current, L.default);
+    });
+  };
+
   return (
-    <div>
+    <div className="location-picker-container">
+      <div className="search-box-map">
+        <input
+          type="text"
+          placeholder="Search for address or city..."
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="form-input"
+        />
+        {suggestions.length > 0 && (
+          <div className="map-suggestions">
+            {suggestions.map((s, i) => (
+              <div key={i} className="suggestion-item" onClick={() => selectSuggestion(s)}>
+                {s.properties.name}{s.properties.city ? `, ${s.properties.city}` : ''}{s.properties.country ? `, ${s.properties.country}` : ''}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <div ref={mapRef} style={{ height: '250px', borderRadius: '12px', border: '1px solid rgba(15,23,42,0.14)', marginTop: '0.5rem' }} />
-      <p className="helper-text-reg">Click on the map to select your organization's location</p>
+      <p className="helper-text-reg">Search above or click on the map to select location</p>
     </div>
   );
 };
@@ -72,10 +123,35 @@ const RegisterPage = () => {
     password: '',
     confirmPassword: '',
     phone: '',
-    organizationName: ''
+    organizationName: '',
+    verificationFile: null
   });
+
+  const handleFileChange = (e) => {
+    setFormData(prev => ({ ...prev, verificationFile: e.target.files[0] }));
+  };
   const [location, setLocation] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFormData(prev => ({ ...prev, verificationFile: e.dataTransfer.files[0] }));
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -102,20 +178,35 @@ const RegisterPage = () => {
       return;
     }
 
-    if (userType === 'serviceProvider' && !formData.organizationName) {
-      setError('Organization name is required');
-      return;
+    if (userType === 'serviceProvider') {
+      if (!formData.organizationName) {
+        setError('Organization name is required');
+        return;
+      }
+      if (!formData.verificationFile) {
+        setError('Verification document is required');
+        return;
+      }
+      if (!location) {
+        setError('Please select organization location on the map');
+        return;
+      }
     }
 
-    const payload = {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      phone: formData.phone,
-      role: userType === 'serviceProvider' ? 'provider' : 'user',
-      organizationName: userType === 'serviceProvider' ? formData.organizationName : undefined,
-      location: userType === 'serviceProvider' ? location : undefined
-    };
+    const payload = new FormData();
+    payload.append('name', formData.name);
+    payload.append('email', formData.email);
+    payload.append('password', formData.password);
+    payload.append('phone', formData.phone);
+    payload.append('role', userType === 'serviceProvider' ? 'provider' : 'user');
+
+    if (userType === 'serviceProvider') {
+      payload.append('organizationName', formData.organizationName);
+      if (location) payload.append('location', JSON.stringify(location));
+      if (formData.verificationFile) {
+        payload.append('certificate', formData.verificationFile); // Using field 'certificate' to match middleware
+      }
+    }
 
     try {
       setLoading(true);
@@ -187,20 +278,56 @@ const RegisterPage = () => {
             </div>
 
             {userType === 'serviceProvider' && (
-              <div className="form-group">
-                <label htmlFor="organizationName" className="form-label">Organization Name</label>
-                <input
-                  id="organizationName"
-                  name="organizationName"
-                  type="text"
-                  className="form-input"
-                  placeholder="Enter organization name"
-                  value={formData.organizationName}
-                  onChange={handleInputChange}
-                  autoComplete="organization"
-                  required
-                />
-              </div>
+              <>
+                <div className="form-group">
+                  <label htmlFor="organizationName" className="form-label">Organization Name</label>
+                  <input
+                    id="organizationName"
+                    name="organizationName"
+                    type="text"
+                    className="form-input"
+                    placeholder="Enter organization name"
+                    value={formData.organizationName}
+                    onChange={handleInputChange}
+                    autoComplete="organization"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="verificationFile" className="form-label">Verification Document (JPG/PNG)</label>
+                  <div
+                    className={`drag-drop-zone ${dragActive ? "active" : ""} ${formData.verificationFile ? "has-file" : ""}`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                    onClick={() => document.getElementById("verificationFile").click()}
+                  >
+                    <input
+                      id="verificationFile"
+                      name="verificationFile"
+                      type="file"
+                      className="file-input-hidden"
+                      onChange={handleFileChange}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                    />
+                    <Upload className="upload-icon" size={24} />
+                    {formData.verificationFile ? (
+                      <div className="file-info-reg">
+                        <span className="file-name-reg">{formData.verificationFile.name}</span>
+                        <span className="file-hint-reg">Click or drag to replace</span>
+                      </div>
+                    ) : (
+                      <div className="upload-text-reg">
+                        <strong>Click to upload</strong> or drag and drop
+                        <span>Support for JPG, PNG (Max 10MB)</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="helper-text-reg">Upload a business license or professional certificate</p>
+                </div>
+              </>
             )}
 
             <div className="form-group">

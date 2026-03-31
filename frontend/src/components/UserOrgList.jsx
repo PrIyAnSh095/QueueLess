@@ -14,6 +14,7 @@ const AllOrganizationsPage = () => {
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
+    if (user.role === 'provider') { navigate('/service-provider'); return; }
     (async () => {
       try {
         const res = await getPublicOrganizationsAPI();
@@ -40,7 +41,7 @@ const AllOrganizationsPage = () => {
         ) : (
           <div className="asp-grid">
             {orgs.map(org => {
-              const initials = org.businessName?.split(' ').filter(Boolean).slice(0,2).map(p => p[0]?.toUpperCase()).join('') || 'O';
+              const initials = (org.businessName || 'Organization').split(' ').filter(Boolean).slice(0,2).map(p => p[0]?.toUpperCase()).join('') || 'O';
               return (
                 <div key={org._id} className="asp-card" onClick={() => navigate(`/organizations/${org._id}`)}>
                   <div className="asp-card-top">

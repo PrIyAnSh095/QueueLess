@@ -1,4 +1,4 @@
-.all-services-page { min-height: 100vh; background: #0f172a; padding: 80px 20px 60px; }
+.all-services-page { min-height: 100vh; background: #0a0e27; padding: 80px 20px 60px; }
 .asp-container { max-width: 1200px; margin: 0 auto; }
 .asp-header { margin-bottom: 28px; }
 .asp-header h1 { color: #f1f5f9; font-size: 32px; margin: 0 0 8px; }
@@ -28,3 +28,125 @@
   transition: background 0.2s;
 }
 .asp-book-btn:hover { background: rgba(124,58,237,0.2); }
+
+/* Admin & Moderation Styles */
+.admin-badge {
+  display: inline-block; padding: 4px 10px; border-radius: 6px;
+  background: rgba(139,92,246,0.1); color: #a78bfa;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  margin-bottom: 12px; border: 1px solid rgba(139,92,246,0.2);
+}
+
+.admin-filter-bar {
+  display: flex; gap: 10px; margin-bottom: 24px;
+}
+.admin-filter-bar button {
+  background: #1e293b; color: #94a3b8; border: 1px solid #334155;
+  padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: 0.2s;
+}
+.admin-filter-bar button:hover { background: #334155; color: #f1f5f9; }
+.admin-filter-bar button.active {
+  background: #7c3aed; color: #fff; border-color: #7c3aed;
+  box-shadow: 0 4px 12px rgba(124,58,237,0.3);
+}
+
+.admin-card-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+}
+
+.admin-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.85);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-icon-btn:hover {
+  background: #7c3aed;
+  border-color: #8b5cf6;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.status-tag {
+  padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+}
+.status-tag.pending { background: rgba(245,158,11,0.1); color: #fbbf24; }
+.status-tag.approved { background: rgba(16,185,129,0.1); color: #34d399; }
+.status-tag.rejected { background: rgba(239,68,68,0.1); color: #f87171; }
+
+.admin-org-meta { margin-bottom: 16px; border-top: 1px solid #334155; padding-top: 16px; }
+.meta-item {
+  display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 13px; margin-bottom: 6px;
+}
+
+.admin-approval-btns {
+  display: flex; gap: 10px; margin-top: auto;
+}
+.admin-approval-btns button {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: 0.2s;
+}
+.btn-approve {
+  background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2);
+}
+.btn-approve:hover { background: #10b981; color: #fff; }
+.btn-reject {
+  background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2);
+}
+.btn-reject:hover { background: #ef4444; color: #fff; }
+
+.btn-view-doc {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 12px; border-radius: 8px;
+  font-size: 13px; font-weight: 700;
+  background: linear-gradient(90deg, #6345f8, #8b5cf6);
+  color: #fff; text-decoration: none;
+  border: none; cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-view-doc:hover { transform: translateY(-1px); box-shadow: 0 6px 12px rgba(0,0,0,0.25); }
+
+.location-summary-box {
+  margin-top: 0.7rem;
+  background: rgba(15, 23, 42, 0.92);
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.hamburger-btn { display: none; background: transparent; border: none; cursor: pointer; }
+@media (max-width: 900px) {
+  .nav-links { display: none; flex-direction: column; gap: 10px; width: 100%; }
+  .nav-links.nav-open { display: flex; }
+  .hamburger-btn { display: block; color: #fff; margin-left: auto; }
+  .nav-container { flex-wrap: wrap; }
+}
+
+@media (max-width: 680px) {
+  .admin-filter-bar {
+    flex-wrap: wrap;
+  }
+
+  .admin-approval-btns {
+    flex-direction: column;
+  }
+
+  .asp-card {
+    padding: 18px;
+  }
+}
+
+.asp-empty p { font-size: 18px; font-weight: 500; }

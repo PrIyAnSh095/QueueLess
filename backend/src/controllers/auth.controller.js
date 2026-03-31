@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import axios from "axios";
 import { createOTP, verifyOTP } from "../services/otp.service.js";
 import { sendOTPEmail } from "../services/email.service.js";
+import { uploadToCloudinary } from "../services/cloudinary.service.js";
 
 const signToken = (user) =>
   jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
@@ -29,6 +30,8 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "All required fields must be provided" });
     }
 
+    const targetRole = role || "user";
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
@@ -36,26 +39,50 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // If it's a provider, we MUST have a file and org name
+    let verificationUrl = "";
+    if (targetRole === "provider") {
+      if (!organizationName) {
+        return res.status(400).json({ message: "Organization name is required for providers" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ message: "Verification document is required for providers" });
+      }
+      
+      try {
+        const result = await uploadToCloudinary(req.file.buffer, "queueless/verification");
+        verificationUrl = result.url;
+      } catch (uploadError) {
+        return res.status(500).json({ message: "File upload failed. Please try again." });
+      }
+    }
+
+    // Now create user
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
       phone,
-      role: role || "user"
+      role: targetRole
     });
 
-    if (user.role === "provider") {
-      if (!organizationName) {
-        await User.findByIdAndDelete(user._id);
-        return res.status(400).json({ message: "Organization name is required for service providers" });
+    if (targetRole === "provider") {
+      let parsedLocation = location;
+      if (typeof location === 'string') {
+        try {
+          parsedLocation = JSON.parse(location);
+        } catch (e) {
+          parsedLocation = {};
+        }
       }
 
       await ServiceProvider.create({
         user: user._id,
         businessName: organizationName,
         phone,
-        location: location || {},
-        status: "pending"
+        location: parsedLocation || {},
+        status: "pending",
+        verificationDocument: verificationUrl
       });
     }
 
@@ -175,10 +202,10 @@ export const forgotPassword = async (req, res) => {
       return res.json({ message: "If this email is registered, you will receive an OTP." });
     }
 
-    const otp = await createOTP(email, "forgot-password");
-    await sendOTPEmail(email, otp, "forgot-password");
+    const code = await createOTP(email, "forgot-password");
+    await sendOTPEmail(email, code, "forgot-password");
 
-    return res.json({ message: "If this email is registered, you will receive an OTP." });
+    return res.json({ message: "If this email is registered, you will receive a verification code." });
   } catch (error) {
     return res.status(500).json({ message: "Server error" });
   }

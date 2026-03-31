@@ -1,310 +1,399 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  getMyOrgProfileAPI,
+  getOrgStatsAPI,
+  getOrgServicesAPI,
+  getOrgQueueUsersAPI,
+  getOrgHistoryAPI,
+  serveNextAPI,
+  updateServiceAPI,
+  deleteServiceAPI,
+  toggleQueueBreakAPI,
+  uploadFileAPI,
+  acceptAvgTimeAPI
+} from '../services/api'
+import { useAdminSocket } from '../utils/useSocket'
+import LocationPicker from './LocationPicker'
 import './ServiceProviderPage.css'
 
 const ServiceProviderPage = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [showAddServiceModal, setShowAddServiceModal] = useState(false)
-  const [showEditServiceModal, setShowEditServiceModal] = useState(false)
-  const [selectedService, setSelectedService] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [orgInfo, setOrgInfo] = useState(null)
+  const [stats, setStats] = useState(null)
+  const [services, setServices] = useState([])
+  const [bookings, setBookings] = useState([])
+  const [historyData, setHistoryData] = useState({ history: [], stats: { usersServed: 0, avgWaitTime: 0 } })
+  const [historyRange, setHistoryRange] = useState('today')
+  const [settingsForm, setSettingsForm] = useState({ businessName: '', phone: '', address: '', description: '' })
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
+  const [updating, setUpdating] = useState(false)
+  const [selectedLocation, setSelectedLocation] = useState(null)
+  const [addressPhoto, setAddressPhoto] = useState(null)
+  const [isAddressChange, setIsAddressChange] = useState(false)
 
-  // Mock data - replace with real data from your backend
-  const organizationInfo = {
-    name: 'Aadhar Services Center',
-    email: 'contact@aadharservices.com',
-    phone: '+91 9876543210',
-    address: '123 Main Street, Mumbai, Maharashtra 400001',
-    registrationDate: '2024-01-01',
-    status: 'active'
-  }
+  const fetchData = useCallback(async (isPolling = false) => {
+    try {
+      if (!isPolling) setLoading(true)
+      setError('')
 
-  const stats = {
-    totalBookings: 1250,
-    todayBookings: 45,
-    pendingBookings: 12,
-    completedBookings: 1180,
-    activeServices: 3,
-    averageWaitTime: '18 minutes'
-  }
+      const [orgRes, statsRes, servicesRes, bookingsRes, historyRes] = await Promise.allSettled([
+        getMyOrgProfileAPI(),
+        getOrgStatsAPI(),
+        getOrgServicesAPI(),
+        getOrgQueueUsersAPI(),
+        getOrgHistoryAPI({ range: historyRange })
+      ])
 
-  const services = [
-    {
-      id: 1,
-      name: 'Aadhar Update',
-      description: 'Update your Aadhar card details',
-      duration: '30-45 minutes',
-      price: 'Free',
-      status: 'active',
-      totalBookings: 850
-    },
-    {
-      id: 2,
-      name: 'Document Verification',
-      description: 'Verify your documents quickly',
-      duration: '20-30 minutes',
-      price: 'Free',
-      status: 'active',
-      totalBookings: 320
-    },
-    {
-      id: 3,
-      name: 'Address Change',
-      description: 'Change your address on Aadhar',
-      duration: '25-35 minutes',
-      price: 'Free',
-      status: 'active',
-      totalBookings: 80
+      if (orgRes.status === 'fulfilled') {
+        setOrgInfo(orgRes.value.data.data)
+      } else {
+        throw orgRes.reason
+      }
+
+      if (statsRes.status === 'fulfilled') setStats(statsRes.value.data.data)
+      if (servicesRes.status === 'fulfilled') setServices(servicesRes.value.data.data)
+      if (bookingsRes.status === 'fulfilled') setBookings(bookingsRes.value.data.data)
+      if (historyRes.status === 'fulfilled') {
+        setHistoryData(historyRes.value.data.data)
+      } else {
+        console.error('Failed to fetch history data:', historyRes.reason)
+      }
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err)
+      setError(err.response?.data?.message || 'Failed to load provider dashboard')
+    } finally {
+      if (!isPolling) setLoading(false)
     }
-  ]
+  }, [historyRange])
 
-  const bookings = [
-    {
-      id: 1,
-      tokenNumber: 'T-2024-001',
-      userName: 'John Doe',
-      userEmail: 'john@example.com',
-      service: 'Aadhar Update',
-      bookingDate: '2024-01-16',
-      bookingTime: '10:00 AM',
-      status: 'pending',
-      estimatedTime: '10:18 AM'
-    },
-    {
-      id: 2,
-      tokenNumber: 'T-2024-002',
-      userName: 'Jane Smith',
-      userEmail: 'jane@example.com',
-      service: 'Document Verification',
-      bookingDate: '2024-01-16',
-      bookingTime: '10:30 AM',
-      status: 'in-progress',
-      estimatedTime: '10:48 AM'
-    },
-    {
-      id: 3,
-      tokenNumber: 'T-2024-003',
-      userName: 'Mike Johnson',
-      userEmail: 'mike@example.com',
-      service: 'Address Change',
-      bookingDate: '2024-01-16',
-      bookingTime: '11:00 AM',
-      status: 'pending',
-      estimatedTime: '11:18 AM'
+  useEffect(() => {
+    fetchData()
+    const interval = setInterval(() => {
+      fetchData(true)
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [fetchData])
+
+  const handleAdminUpdate = useCallback(() => {
+    fetchData(true)
+  }, [fetchData])
+
+  // Listen for admin/global updates that might affect this provider
+  useAdminSocket(handleAdminUpdate)
+
+  useEffect(() => {
+    if (orgInfo) {
+      setSettingsForm({
+        businessName: orgInfo.businessName || '',
+        phone: orgInfo.phone || '',
+        address: orgInfo.address || '',
+        description: orgInfo.description || ''
+      })
+      if (orgInfo.location?.lat != null && orgInfo.location?.lng != null) {
+        setSelectedLocation({ lat: orgInfo.location.lat, lng: orgInfo.location.lng })
+      } else {
+        setSelectedLocation(null)
+      }
+      setIsAddressChange(false)
+      setAddressPhoto(null)
     }
-  ]
+  }, [orgInfo])
 
-  const handleAddService = () => {
-    navigate('/service-provider/create-service')
+  useEffect(() => {
+    if (!loading && orgInfo && orgInfo.status !== 'approved') {
+      navigate('/org-status', { replace: true })
+    }
+  }, [loading, navigate, orgInfo])
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault()
+    try {
+      setUpdating(true)
+      const { updateMyOrgProfileAPI } = await import('../services/api')
+
+      const hasLocationChanged =
+        (selectedLocation?.lat ?? null) !== (orgInfo?.location?.lat ?? null) ||
+        (selectedLocation?.lng ?? null) !== (orgInfo?.location?.lng ?? null)
+
+      const isAddressChanging =
+        settingsForm.address.trim() !== (orgInfo?.address || '').trim() ||
+        hasLocationChanged
+
+      if (isAddressChanging && !addressPhoto) {
+        alert('Please upload a photo proof when changing address or pin location')
+        return
+      }
+
+      const updateData = {
+        ...settingsForm,
+        location: selectedLocation
+      }
+
+      if (isAddressChanging) {
+        // Upload photo to backend
+        const uploadRes = await uploadFileAPI(addressPhoto)
+        updateData.photoProof = uploadRes.data.data.url
+      }
+
+      const result = await updateMyOrgProfileAPI(updateData)
+
+      if (isAddressChanging) {
+        alert('Address change request submitted for admin approval')
+        setAddressPhoto(null)
+        setIsAddressChange(false)
+      } else {
+        alert('Profile updated successfully')
+      }
+
+      fetchData(true)
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update profile')
+    } finally {
+      setUpdating(false)
+    }
   }
 
-  const handleEditService = (service) => {
-    setSelectedService(service)
-    setShowEditServiceModal(true)
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      return alert('Passwords do not match')
+    }
+    try {
+      setUpdating(true)
+      const { changePasswordAPI } = await import('../services/api')
+      await changePasswordAPI({
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword
+      })
+      alert('Password changed successfully')
+      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' })
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to change password')
+    } finally {
+      setUpdating(false)
+    }
   }
 
-  const handleDeleteService = (id) => {
+  const handleAvgTimeSuggestion = async (accept) => {
+    if (accept) {
+      const confirmed = window.confirm(
+        `QueueLess suggests updating your average service time to ${orgInfo?.suggestedAvgServiceTime || 0} minutes across your queues. Apply it now?`
+      )
+      if (!confirmed) return
+    }
+
+    try {
+      setUpdating(true)
+      await acceptAvgTimeAPI(accept)
+      await fetchData(true)
+
+      if (accept) {
+        const wantsReview = window.confirm('Average time updated. Do you also want to review and adjust your service timings now?')
+        if (wantsReview) {
+          navigate('/service-provider/manage-queues')
+        }
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to process average time suggestion')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleServeNext = async (serviceId) => {
+    try {
+      await serveNextAPI(serviceId)
+      fetchData(true)
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to serve next user')
+    }
+  }
+
+  const handleToggleBreak = async (queueId) => {
+    try {
+      await toggleQueueBreakAPI(queueId)
+      fetchData(true)
+    } catch (err) {
+      alert('Failed to toggle break status')
+    }
+  }
+
+  const handleDeleteService = async (id) => {
     if (window.confirm('Are you sure you want to delete this service?')) {
-      console.log('Delete service:', id)
-      // Add delete logic here
+      try {
+        await deleteServiceAPI(id)
+        setServices(services.filter(s => s._id !== id))
+      } catch (err) {
+        alert('Failed to delete service')
+      }
     }
   }
 
-  const handleUpdateBookingStatus = (id, status) => {
-    console.log('Update booking status:', id, status)
-    // Add update logic here
+  if (loading && !orgInfo) {
+    return <div className="sp-loading">Loading Dashboard...</div>
+  }
+
+  if (!loading && error && !orgInfo) {
+    return <div className="sp-loading">{error}</div>
+  }
+
+  if (!orgInfo) {
+    return <div className="sp-loading">Loading Dashboard...</div>
+  }
+
+  if (orgInfo.status !== 'approved') {
+    return null
+  }
+
+  const displayStats = {
+    totalBookings: stats?.totalBookings || 0,
+    todayBookings: (stats?.activeBookings || 0) + (stats?.completedBookings || 0),
+    pendingBookings: stats?.activeBookings || 0,
+    completedBookings: stats?.completedBookings || 0,
+    activeServices: stats?.activeServices || 0,
+    averageWaitTime: `${historyData?.stats?.avgWaitTime || 0} mins`
   }
 
   return (
     <div className="service-provider-page">
       <div className="sp-container">
-        {/* Header */}
         <div className="sp-header">
           <div>
-            <h1 className="sp-title">Service Provider Dashboard</h1>
-            <p className="sp-subtitle">Manage your services and bookings</p>
+            <h1 className="sp-title">Organization Dashboard</h1>
+            <p className="sp-subtitle">Managing {orgInfo?.businessName}</p>
           </div>
           <div className="sp-org-info">
-            <div className="sp-org-avatar">{organizationInfo.name.charAt(0)}</div>
+            <div className="sp-org-avatar">{orgInfo?.businessName?.charAt(0)}</div>
             <div>
-              <div className="sp-org-name">{organizationInfo.name}</div>
-              <div className="sp-org-status active">Active</div>
+              <div className="sp-org-name">{orgInfo?.businessName}</div>
+              <div className="sp-org-status active">Approved</div>
             </div>
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {orgInfo?.avgTimeSuggestionPending && (
+          <div className="avg-time-banner">
+            <div>
+              <div className="avg-time-banner-label">QueueLess suggestion</div>
+              <h3>Average service time update available</h3>
+              <p>
+                Recent queue activity suggests changing your average service time to
+                <strong> {orgInfo?.suggestedAvgServiceTime || 0} minutes</strong>.
+              </p>
+            </div>
+            <div className="avg-time-banner-actions">
+              <button className="btn-option highlight" onClick={() => handleAvgTimeSuggestion(true)} disabled={updating}>
+                Accept update
+              </button>
+              <button className="btn-option" onClick={() => handleAvgTimeSuggestion(false)} disabled={updating}>
+                Keep current time
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="sp-stats-grid">
           <div className="sp-stat-card">
             <div className="sp-stat-icon">📅</div>
             <div className="sp-stat-info">
-              <div className="sp-stat-value">{stats.totalBookings}</div>
+              <div className="sp-stat-value">{displayStats.totalBookings}</div>
               <div className="sp-stat-label">Total Bookings</div>
-            </div>
-          </div>
-          <div className="sp-stat-card">
-            <div className="sp-stat-icon">⏰</div>
-            <div className="sp-stat-info">
-              <div className="sp-stat-value">{stats.todayBookings}</div>
-              <div className="sp-stat-label">Today's Bookings</div>
             </div>
           </div>
           <div className="sp-stat-card">
             <div className="sp-stat-icon">⏳</div>
             <div className="sp-stat-info">
-              <div className="sp-stat-value">{stats.pendingBookings}</div>
-              <div className="sp-stat-label">Pending</div>
+              <div className="sp-stat-value">{displayStats.pendingBookings}</div>
+              <div className="sp-stat-label">In Queue</div>
             </div>
           </div>
           <div className="sp-stat-card">
             <div className="sp-stat-icon">✅</div>
             <div className="sp-stat-info">
-              <div className="sp-stat-value">{stats.completedBookings}</div>
-              <div className="sp-stat-label">Completed</div>
-            </div>
-          </div>
-          <div className="sp-stat-card">
-            <div className="sp-stat-icon">🎯</div>
-            <div className="sp-stat-info">
-              <div className="sp-stat-value">{stats.activeServices}</div>
-              <div className="sp-stat-label">Active Services</div>
+              <div className="sp-stat-value">{displayStats.completedBookings}</div>
+              <div className="sp-stat-label">Served</div>
             </div>
           </div>
           <div className="sp-stat-card">
             <div className="sp-stat-icon">⏱️</div>
             <div className="sp-stat-info">
-              <div className="sp-stat-value">{stats.averageWaitTime}</div>
-              <div className="sp-stat-label">Avg Wait Time</div>
+              <div className="sp-stat-value">{displayStats.averageWaitTime}</div>
+              <div className="sp-stat-label">Avg Wait</div>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="sp-tabs">
-          <button
-            className={`sp-tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            Dashboard
-          </button>
-          <button
-            className={`sp-tab-button ${activeTab === 'services' ? 'active' : ''}`}
-            onClick={() => setActiveTab('services')}
-          >
-            My Services
-          </button>
-          <button
-            className={`sp-tab-button ${activeTab === 'bookings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('bookings')}
-          >
-            Bookings ({stats.pendingBookings})
-          </button>
-          <button
-            className={`sp-tab-button ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            Settings
-          </button>
+          {['dashboard', 'services', 'bookings', 'history', 'settings'].map(tab => (
+            <button
+              key={tab}
+              className={`sp-tab-button ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
         </div>
 
-        {/* Tab Content */}
         <div className="sp-content">
-          {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div className="sp-dashboard-section">
-              <h2 className="sp-section-title">Overview</h2>
               <div className="sp-dashboard-grid">
                 <div className="sp-dashboard-card">
-                  <h3>Today's Schedule</h3>
+                  <h3>Recently Joined</h3>
                   <div className="schedule-list">
-                    {bookings.slice(0, 5).map((booking) => (
-                      <div key={booking.id} className="schedule-item">
-                        <div className="schedule-time">{booking.bookingTime}</div>
-                        <div className="schedule-details">
-                          <div className="schedule-service">{booking.service}</div>
-                          <div className="schedule-user">{booking.userName} - {booking.tokenNumber}</div>
+                    {bookings.length === 0 ? <p>No one in queue.</p> : 
+                      bookings.slice(0, 5).map(b => (
+                        <div key={b._id} className="schedule-item">
+                          <div className="schedule-time">#{b.tokenNumber}</div>
+                          <div className="schedule-details">
+                            <div className="schedule-service">{b.service?.serviceName}</div>
+                            <div className="schedule-user">{b.user?.name}</div>
+                          </div>
                         </div>
-                        <span className={`schedule-status ${booking.status}`}>
-                          {booking.status}
-                        </span>
-                      </div>
-                    ))}
+                      ))
+                    }
                   </div>
                 </div>
                 <div className="sp-dashboard-card">
-                  <h3>Quick Actions</h3>
+                  <h3>Quick Operations</h3>
                   <div className="quick-actions-list">
-                    <button className="sp-quick-action-btn" onClick={handleAddService}>
-                      <span className="action-icon">➕</span>
-                      Add New Service
-                    </button>
-                    <button className="sp-quick-action-btn" onClick={() => setActiveTab('bookings')}>
-                      <span className="action-icon">📋</span>
-                      View All Bookings
-                    </button>
-                    <button className="sp-quick-action-btn" onClick={() => setActiveTab('settings')}>
-                      <span className="action-icon">⚙️</span>
-                      Update Profile
-                    </button>
-                    <button className="sp-quick-action-btn">
-                      <span className="action-icon">📊</span>
-                      View Reports
-                    </button>
+                    <button onClick={() => navigate('/service-provider/manage-queues')} className="btn-highlight-qm">Queue Control Center</button>
+                    <button className="btn-option" onClick={() => navigate('/service-provider/create-service')}>Add Service</button>
+                    <button className="btn-option" onClick={() => navigate('/service-provider/counters')}>Manage Counters</button>
+                    <button className="btn-option" onClick={() => navigate('/reception-dashboard')}>Reception Desk</button>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Services Tab */}
           {activeTab === 'services' && (
             <div className="sp-services-section">
-              <div className="sp-section-header">
-                <h2 className="sp-section-title">My Services</h2>
-                <button className="btn-add-service" onClick={handleAddService}>
-                  <span>➕</span>
-                  Add New Service
-                </button>
-              </div>
               <div className="services-list">
-                {services.map((service) => (
-                  <div key={service.id} className="service-item-card">
+                {services.map(s => (
+                  <div key={s._id} className="service-item-card">
                     <div className="service-item-header">
-                      <div>
-                        <h3 className="service-item-name">{service.name}</h3>
-                        <p className="service-item-description">{service.description}</p>
-                      </div>
-                      <span className={`service-item-status ${service.status}`}>
-                        {service.status}
-                      </span>
+                      <h3>{s.serviceName}</h3>
+                      <button className="btn-edit" onClick={() => navigate(`/service-provider/create-service?edit=${s._id}`)}>Edit</button>
                     </div>
-                    <div className="service-item-details">
-                      <div className="service-item-detail">
-                        <span className="detail-label">Duration:</span>
-                        <span className="detail-value">{service.duration}</span>
-                      </div>
-                      <div className="service-item-detail">
-                        <span className="detail-label">Price:</span>
-                        <span className="detail-value">{service.price}</span>
-                      </div>
-                      <div className="service-item-detail">
-                        <span className="detail-label">Total Bookings:</span>
-                        <span className="detail-value">{service.totalBookings}</span>
-                      </div>
-                    </div>
-                    <div className="service-item-actions">
-                      <button
-                        className="btn-edit"
-                        onClick={() => handleEditService(service)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleDeleteService(service.id)}
-                      >
-                        Delete
-                      </button>
+                    <div className="queue-list-mini">
+                      <h4>Operational Queues</h4>
+                      {s.queues?.map(q => (
+                        <div key={q._id} className="q-mini-row">
+                          <span>{q.queueName} {q.isOnBreak && <b style={{color:'#ef4444'}}>(ON BREAK)</b>}</span>
+                          <button 
+                            className={`btn-toggle-break ${q.isOnBreak ? 'resume' : 'break'}`}
+                            onClick={() => handleToggleBreak(q._id)}
+                          >
+                            {q.isOnBreak ? "Resume" : "Go on Break"}
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -312,129 +401,198 @@ const ServiceProviderPage = () => {
             </div>
           )}
 
-          {/* Bookings Tab */}
           {activeTab === 'bookings' && (
             <div className="sp-bookings-section">
-              <h2 className="sp-section-title">Today's Bookings</h2>
-              <div className="bookings-table-container">
+              <table className="bookings-table">
+                <thead>
+                  <tr>
+                    <th>Token</th>
+                    <th>User</th>
+                    <th>Service / Queue</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map(b => (
+                    <tr key={b._id}>
+                      <td>#{b.tokenNumber}</td>
+                      <td>{b.user?.name}</td>
+                      <td>{b.service?.serviceName} / {b.queue?.queueName}</td>
+                      <td>
+                        <button className="btn-status start" onClick={() => handleServeNext(b.queue?._id)}>Serve</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+             <div className="sp-history-section">
+                <div className="history-stats-mini">
+                  <div>Served: {historyData.stats.usersServed}</div>
+                  <div>Avg Wait: {historyData.stats.avgWaitTime}m</div>
+                </div>
                 <table className="bookings-table">
                   <thead>
-                    <tr>
-                      <th>Token Number</th>
-                      <th>Customer Name</th>
-                      <th>Service</th>
-                      <th>Time</th>
-                      <th>Estimated Time</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
+                    <tr><th>Token</th><th>User</th><th>Service</th><th>Served At</th><th>Wait</th></tr>
                   </thead>
                   <tbody>
-                    {bookings.map((booking) => (
-                      <tr key={booking.id}>
-                        <td className="token-cell">{booking.tokenNumber}</td>
-                        <td>
-                          <div className="user-info">
-                            <div className="user-name">{booking.userName}</div>
-                            <div className="user-email">{booking.userEmail}</div>
-                          </div>
-                        </td>
-                        <td>{booking.service}</td>
-                        <td>{booking.bookingTime}</td>
-                        <td>{booking.estimatedTime}</td>
-                        <td>
-                          <span className={`booking-status-badge ${booking.status}`}>
-                            {booking.status}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="booking-actions">
-                            {booking.status === 'pending' && (
-                              <>
-                                <button
-                                  className="btn-status start"
-                                  onClick={() => handleUpdateBookingStatus(booking.id, 'in-progress')}
-                                >
-                                  Start
-                                </button>
-                                <button
-                                  className="btn-status complete"
-                                  onClick={() => handleUpdateBookingStatus(booking.id, 'completed')}
-                                >
-                                  Complete
-                                </button>
-                              </>
-                            )}
-                            {booking.status === 'in-progress' && (
-                              <button
-                                className="btn-status complete"
-                                onClick={() => handleUpdateBookingStatus(booking.id, 'completed')}
-                              >
-                                Complete
-                              </button>
-                            )}
-                            {booking.status === 'completed' && (
-                              <span className="completed-text">Done</span>
-                            )}
-                          </div>
-                        </td>
+                    {historyData.history.map(h => (
+                      <tr key={h._id}>
+                        <td>#{h.tokenNumber}</td>
+                        <td>{h.user?.name}</td>
+                        <td>{h.service?.serviceName}</td>
+                        <td>{h.servedTime ? new Date(h.servedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A'}</td>
+                        <td>{h.actualWaitDuration}m</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
+             </div>
           )}
 
-          {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="sp-settings-section">
-              <h2 className="sp-section-title">Organization Settings</h2>
-              <div className="settings-card">
-                <h3>Organization Information</h3>
-                <div className="settings-form">
-                  <div className="settings-form-group">
-                    <label>Organization Name</label>
-                    <input type="text" defaultValue={organizationInfo.name} />
-                  </div>
-                  <div className="settings-form-group">
-                    <label>Email</label>
-                    <input type="email" defaultValue={organizationInfo.email} />
-                  </div>
-                  <div className="settings-form-group">
-                    <label>Phone Number</label>
-                    <input type="tel" defaultValue={organizationInfo.phone} />
-                  </div>
-                  <div className="settings-form-group">
-                    <label>Address</label>
-                    <textarea rows="3" defaultValue={organizationInfo.address}></textarea>
-                  </div>
-                  <button className="btn-save-settings">Save Changes</button>
+              <div className="sp-settings-grid">
+                <div className="settings-card">
+                  <h3>Organization Profile</h3>
+                  <form onSubmit={handleUpdateProfile} className="settings-form">
+                    <div className="settings-form-group">
+                      <label>Business Name</label>
+                      <input 
+                        type="text" 
+                        value={settingsForm.businessName} 
+                        onChange={e => setSettingsForm({...settingsForm, businessName: e.target.value})}
+                        placeholder="Organization Name"
+                      />
+                    </div>
+                    <div className="settings-form-group">
+                      <label>Contact Phone</label>
+                      <input 
+                        type="text" 
+                        value={settingsForm.phone} 
+                        onChange={e => setSettingsForm({...settingsForm, phone: e.target.value})}
+                        placeholder="Phone Number"
+                      />
+                    </div>
+                    <div className="settings-form-group">
+                      <label>Address</label>
+                      <LocationPicker
+                        onLocationSelect={(location) => {
+                          const nextLocation = { lat: location.lat, lng: location.lng }
+                          const hasAddressChanged = settingsForm.address.trim() !== (orgInfo?.address || '').trim()
+                          const hasLocationChanged =
+                            nextLocation.lat !== (orgInfo?.location?.lat ?? null) ||
+                            nextLocation.lng !== (orgInfo?.location?.lng ?? null)
+
+                          setSelectedLocation(nextLocation)
+                          setIsAddressChange(hasAddressChanged || hasLocationChanged)
+                        }}
+                        initialLocation={selectedLocation}
+                        initialAddress={settingsForm.address}
+                      />
+                      <input 
+                        type="text" 
+                        value={settingsForm.address} 
+                        onChange={e => {
+                          const nextAddress = e.target.value
+                          const hasLocationChanged =
+                            (selectedLocation?.lat ?? null) !== (orgInfo?.location?.lat ?? null) ||
+                            (selectedLocation?.lng ?? null) !== (orgInfo?.location?.lng ?? null)
+
+                          setSettingsForm({...settingsForm, address: nextAddress})
+                          setIsAddressChange(nextAddress.trim() !== (orgInfo?.address || '').trim() || hasLocationChanged)
+                        }}
+                        placeholder="Full Address"
+                        style={{ marginTop: '10px' }}
+                      />
+                      {isAddressChange && (
+                        <div className="settings-form-group" style={{ marginTop: '10px' }}>
+                          <label>Photo Proof (Required for address change)</label>
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={e => setAddressPhoto(e.target.files[0])}
+                            required
+                          />
+                          {addressPhoto && <p>Selected: {addressPhoto.name}</p>}
+                        </div>
+                      )}
+                    </div>
+                    <div className="settings-form-group">
+                      <label>Description</label>
+                      <textarea 
+                        value={settingsForm.description} 
+                        onChange={e => setSettingsForm({...settingsForm, description: e.target.value})}
+                        placeholder="Briefly describe your organization"
+                      />
+                    </div>
+                    <button type="submit" className="btn-save-settings" disabled={updating}>
+                      {updating ? 'Saving...' : 'Update Profile'}
+                    </button>
+                  </form>
                 </div>
-              </div>
-              <div className="settings-card">
-                <h3>Account Settings</h3>
-                <div className="settings-options">
-                  <div className="settings-option">
-                    <div>
-                      <div className="option-title">Change Password</div>
-                      <div className="option-description">Update your account password</div>
+
+                <div className="settings-card">
+                  <h3>Security & Access</h3>
+                  <form onSubmit={handleChangePassword} className="settings-form">
+                    <div className="settings-form-group">
+                      <label>Current Password</label>
+                      <input 
+                        type="password" 
+                        value={passwordForm.oldPassword} 
+                        onChange={e => setPasswordForm({...passwordForm, oldPassword: e.target.value})}
+                        required
+                      />
                     </div>
-                    <button className="btn-option">Change</button>
-                  </div>
-                  <div className="settings-option">
-                    <div>
-                      <div className="option-title">Notification Preferences</div>
-                      <div className="option-description">Manage email and SMS notifications</div>
+                    <div className="settings-form-group">
+                      <label>New Password</label>
+                      <input 
+                        type="password" 
+                        value={passwordForm.newPassword} 
+                        onChange={e => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                        required
+                      />
                     </div>
-                    <button className="btn-option">Manage</button>
-                  </div>
-                  <div className="settings-option">
-                    <div>
-                      <div className="option-title">Business Hours</div>
-                      <div className="option-description">Set your operating hours</div>
+                    <div className="settings-form-group">
+                      <label>Confirm New Password</label>
+                      <input 
+                        type="password" 
+                        value={passwordForm.confirmPassword} 
+                        onChange={e => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                        required
+                      />
                     </div>
-                    <button className="btn-option">Configure</button>
+                    <button type="submit" className="btn-save-settings" disabled={updating}>
+                      {updating ? 'Updating Password...' : 'Change Password'}
+                    </button>
+                  </form>
+
+                  <div className="settings-extra-actions" style={{marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem'}}>
+                    <h4>Account Management</h4>
+                    <div className="settings-option">
+                      <div>
+                        <div className="option-title">Queue Control Center</div>
+                        <div className="option-description">Manage all tokens across all services in one place.</div>
+                      </div>
+                      <button className="btn-option highlight" onClick={() => navigate('/service-provider/manage-queues')}>Open Control</button>
+                    </div>
+                    <div className="settings-option">
+                      <div>
+                        <div className="option-title">Manage Staff</div>
+                        <div className="option-description">Add or remove receptionists and counter staff.</div>
+                      </div>
+                      <button className="btn-option" onClick={() => navigate('/service-provider/counters')}>Manage</button>
+                    </div>
+                    <div className="settings-option">
+                      <div>
+                        <div className="option-title">Service Counters</div>
+                        <div className="option-description">Configure your physical service points.</div>
+                      </div>
+                      <button className="btn-option" onClick={() => navigate('/service-provider/counters')}>Configure</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -442,44 +600,6 @@ const ServiceProviderPage = () => {
           )}
         </div>
       </div>
-
-      {/* Add Service Modal */}
-      {showAddServiceModal && (
-        <div className="modal-overlay" onClick={() => setShowAddServiceModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Add New Service</h2>
-              <button className="modal-close" onClick={() => setShowAddServiceModal(false)}>×</button>
-            </div>
-            <form className="modal-form">
-              <div className="modal-form-group">
-                <label>Service Name</label>
-                <input type="text" placeholder="e.g., Aadhar Update" />
-              </div>
-              <div className="modal-form-group">
-                <label>Description</label>
-                <textarea rows="3" placeholder="Describe your service"></textarea>
-              </div>
-              <div className="modal-form-row">
-                <div className="modal-form-group">
-                  <label>Duration (minutes)</label>
-                  <input type="number" placeholder="30" />
-                </div>
-                <div className="modal-form-group">
-                  <label>Price</label>
-                  <input type="text" placeholder="Free or amount" />
-                </div>
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn-modal-cancel" onClick={() => setShowAddServiceModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-modal-submit">Add Service</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

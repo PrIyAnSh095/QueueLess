@@ -78,7 +78,9 @@ const QueueHistoryPage = () => {
                 </div>
                 <div className="qh-item-right">
                   <span className="qh-item-status" style={{color: statusColors[t.status]}}>{t.status}</span>
-                  <span className="qh-item-date">{new Date(t.createdAt).toLocaleDateString()}</span>
+                  <span className="qh-item-date">
+                    {new Date(t.createdAt).toLocaleDateString()} at {new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                  </span>
                   {t.status === 'served' && (
                     <button className="qh-delay-btn" onClick={() => handleReportDelay(t._id)}>Report Delay</button>
                   )}

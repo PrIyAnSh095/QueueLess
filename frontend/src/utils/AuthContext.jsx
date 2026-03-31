@@ -18,7 +18,9 @@ export const AuthProvider = ({ children }) => {
     const validateToken = async () => {
       try {
         const res = await getMe();
-        const userData = res.data.user;
+        const userData = res.data.providerProfile
+          ? { ...res.data.user, providerProfile: res.data.providerProfile }
+          : res.data.user;
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
       } catch {
@@ -31,9 +33,20 @@ export const AuthProvider = ({ children }) => {
     validateToken();
   }, []);
 
-  const login = (userData) => {
+  const login = async (userData) => {
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
+
+    try {
+      const res = await getMe();
+      const refreshedUser = res.data.providerProfile
+        ? { ...res.data.user, providerProfile: res.data.providerProfile }
+        : res.data.user;
+      setUser(refreshedUser);
+      localStorage.setItem("user", JSON.stringify(refreshedUser));
+    } catch {
+      // Keep the login response if the refresh fails.
+    }
   };
 
   const logout = async () => {

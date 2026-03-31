@@ -23,6 +23,48 @@
   outline: none; box-sizing: border-box;
 }
 .review-textarea:focus { border-color: #7c3aed; }
+.review-image-input {
+  width: 100%;
+  margin-top: 12px;
+  background: #0f172a;
+  color: #cbd5e1;
+  border: 1px dashed #475569;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.review-image-preview-row,
+.review-images-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.review-image-preview {
+  position: relative;
+}
+.review-image-preview img,
+.review-thumb {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(148,163,184,0.18);
+}
+.review-image-preview button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.95);
+  color: #fff;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .review-error { color: #ef4444; font-size: 13px; margin: 8px 0; }
 .review-submit-btn {
   background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none;

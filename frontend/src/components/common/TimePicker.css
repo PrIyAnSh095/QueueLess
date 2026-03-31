@@ -1,0 +1,204 @@
+.time-picker-container {
+  position: relative;
+  width: 100%;
+}
+
+.tp-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tp-input-wrapper {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tp-input-wrapper:hover {
+  border-color: #8b5cf6;
+  background: #233044;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.1);
+}
+
+.tp-icon {
+  color: #8b5cf6;
+  margin-right: 0.75rem;
+}
+
+.tp-input {
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  color: #f1f5f9;
+  cursor: pointer;
+  width: 100%;
+  outline: none;
+  font-weight: 500;
+}
+
+.tp-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  margin-top: 0.75rem;
+  padding: 1.5rem;
+  background: #0f172a;
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  border: 1px solid #334155;
+  width: 280px;
+  animation: tpFadeIn 0.2s ease-out;
+}
+
+@keyframes tpFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tp-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.tp-time-display {
+  display: flex;
+  align-items: center;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.tp-unit {
+  cursor: pointer;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.tp-unit.active {
+  color: #f1f5f9;
+  background: #8b5cf6;
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.tp-separator {
+  margin: 0 0.125rem;
+}
+
+.tp-ampm-toggle {
+  display: flex;
+  background: #1e293b;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid #334155;
+}
+
+.tp-ampm-btn {
+  padding: 0.4rem 1.25rem;
+  border-radius: 0.6rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tp-ampm-btn.active {
+  background: #8b5cf6;
+  color: white;
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.3);
+}
+
+.tp-clock-face {
+  position: relative;
+  width: 210px;
+  height: 210px;
+  background: #1e293b;
+  border-radius: 50%;
+  margin: 0 auto;
+  border: 1px solid #334155;
+}
+
+.tp-clock-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.tp-hand {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 40%;
+  background: #8b5cf6;
+  transform-origin: bottom center;
+  transform: translate(-50%, -100%) rotate(var(--rotation, 0deg));
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 5px rgba(139, 92, 246, 0.3);
+}
+
+.tp-hand::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background: #8b5cf6;
+  border-radius: 50%;
+}
+
+.tp-number {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #94a3b8;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tp-number:hover {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.tp-number.selected {
+  background: #8b5cf6;
+  color: white;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+}

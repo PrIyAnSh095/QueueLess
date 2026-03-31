@@ -9,6 +9,9 @@ import organizationRoutes from "./routes/organization.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import searchRoutes from "./routes/search.routes.js";
+import counterRoutes from "./routes/counter.routes.js";
+import queueRoutes from "./routes/queue.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 const app = express();
 
@@ -29,6 +32,9 @@ app.use("/api/organizations", organizationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/counters", counterRoutes);
+app.use("/api/queues", queueRoutes);
+app.use("/api/users", userRoutes);
 
 app.use("/uploads", express.static("uploads"));
 

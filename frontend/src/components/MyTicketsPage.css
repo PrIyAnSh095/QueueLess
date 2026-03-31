@@ -113,25 +113,78 @@
   letter-spacing: 0.05em;
 }
 
-.ticket-info-row {
+.countdown-timer-box {
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  border-radius: 16px;
+  padding: 1.25rem;
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-  font-size: 0.95rem;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
-.ticket-info-row .label {
+.timer-icon {
+  color: #0ea5e9;
+  flex-shrink: 0;
+}
+
+.timer-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.timer-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(241, 245, 249, 0.5);
+}
+
+.timer-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1;
+  margin-top: 0.25rem;
+}
+
+.timer-value span {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(241, 245, 249, 0.4);
+  margin-left: 0.25rem;
+}
+
+.ticket-meta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.tm-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.85rem;
+  color: rgba(241, 245, 249, 0.5);
+}
+
+.tm-row svg {
+  color: #6366f1;
+}
+
+.ticket-card-mt.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  background: rgba(30, 41, 59, 0.4);
   color: #64748b;
+  font-style: italic;
 }
 
-.ticket-info-row .value {
-  color: #e2e8f0;
-  font-weight: 600;
-}
-
-.highlight-text {
-  color: #60a5fa !important;
-}
 
 .ticket-footer-mt {
   margin-top: 2rem;
@@ -238,3 +291,151 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* === Location & Leave Suggestion === */
+.ticket-location-info {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.leave-suggestion {
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  margin-top: 0.25rem;
+  display: inline-block;
+  align-self: flex-start;
+}
+
+.leave-suggestion.leave-now {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.leave-suggestion.leave-soon {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.leave-suggestion.leave-later {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* === Dispute / Feedback Section === */
+.dispute-section {
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.dispute-hint {
+  font-size: 0.87rem;
+  color: #94a3b8;
+  margin-bottom: 1rem;
+}
+
+.dispute-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dispute-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 12px;
+  padding: 0.85rem 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dispute-prompt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.dispute-prompt .btn-yes,
+.dispute-prompt .btn-no {
+  padding: 0.3rem 0.8rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.dispute-prompt .btn-yes {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.dispute-prompt .btn-no {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.dispute-prompt .btn-yes:hover,
+.dispute-prompt .btn-no:hover {
+  transform: scale(1.05);
+}
+
+.dispute-done {
+  font-size: 0.82rem;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.no-history-text, .loading-container-mt, .mt-error-banner {
+  text-align: center;
+  color: #64748b;
+  padding: 1rem;
+}
+
+.mt-error-banner {
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 10px;
+  color: #ef4444;
+  margin-bottom: 1.5rem;
+}
+
+/* === Maps Direction Link === */
+.maps-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #818cf8;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.maps-link:hover {
+  color: #a78bfa;
+  transform: translateX(2px);
+}
+
+.maps-link svg {
+  color: inherit;
+}
+

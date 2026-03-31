@@ -6,7 +6,7 @@ import ReviewSection from './ReviewSection';
 import { SkeletonCard } from './Skeleton';
 import './AllServicesPage.css';
 
-const OrganizationDetailsPage = () => {
+const UserViewOrg = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -45,7 +45,7 @@ const OrganizationDetailsPage = () => {
   const initials = org.businessName?.split(' ').filter(Boolean).slice(0,2).map(p => p[0]?.toUpperCase()).join('') || 'O';
 
   return (
-    <div className="all-services-page">
+    <div className="all-services-page user-org-view">
       <div className="asp-container">
         <button className="asp-book-btn" style={{width:'auto',marginBottom:20}} onClick={() => navigate(-1)}>← Back</button>
 
@@ -86,4 +86,4 @@ const OrganizationDetailsPage = () => {
   );
 };
 
-export default OrganizationDetailsPage;
+export default UserViewOrg;

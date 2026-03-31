@@ -3,9 +3,14 @@ import Ticket from "../models/ticket.model.js";
 import Service from "../models/Service.model.js";
 import ServiceProvider from "../models/ServiceProvider.model.js";
 import mongoose from "mongoose";
+import { uploadToCloudinary } from "../services/cloudinary.service.js";
 
 export const createReview = async (req, res) => {
   try {
+    if (req.user.role !== "user") {
+      return res.status(403).json({ success: false, message: "Only users can add reviews." });
+    }
+
     const { targetType, targetId, rating, comment } = req.body;
 
     if (!["organization", "service", "queue"].includes(targetType)) {
@@ -16,28 +21,38 @@ export const createReview = async (req, res) => {
     }
 
     // Verify user has joined a queue for this target
-    let serviceIds = [];
+    let hasTicket = false;
     if (targetType === "service") {
-      serviceIds = [targetId];
+      hasTicket = await Ticket.exists({ user: req.user._id, service: targetId });
+    } else if (targetType === "queue") {
+      hasTicket = await Ticket.exists({ user: req.user._id, queue: targetId });
     } else if (targetType === "organization") {
       const services = await Service.find({ organizationId: targetId }).select("_id");
-      serviceIds = services.map(s => s._id);
+      hasTicket = await Ticket.exists({
+        user: req.user._id,
+        service: { $in: services.map(s => s._id) }
+      });
     }
 
-    if (serviceIds.length > 0) {
-      const hasTicket = await Ticket.findOne({
-        user: req.user._id,
-        service: { $in: serviceIds }
-      });
-      if (!hasTicket) {
-        return res.status(403).json({ success: false, message: "You can only review after joining a queue" });
-      }
+    if (!hasTicket) {
+      return res.status(403).json({ success: false, message: "You can only review after joining a queue" });
     }
 
     const existing = await Review.findOne({ user: req.user._id, targetType, targetId });
+    
+    let imageUrls = existing ? existing.images : [];
+    if (req.files && req.files.length > 0) {
+      const uploadPromises = req.files.map(file => 
+        uploadToCloudinary(file.buffer, "queueless/reviews")
+      );
+      const newImages = await Promise.all(uploadPromises);
+      imageUrls = [...imageUrls, ...newImages];
+    }
+
     if (existing) {
       existing.rating = rating;
       existing.comment = comment || existing.comment;
+      existing.images = imageUrls;
       await existing.save();
       return res.json({ success: true, data: existing });
     }
@@ -46,15 +61,17 @@ export const createReview = async (req, res) => {
       user: req.user._id,
       targetType,
       targetId,
-      rating,
-      comment
+      rating: Number(rating),
+      comment,
+      images: imageUrls
     });
+
     return res.status(201).json({ success: true, data: review });
-  } catch (err) {
-    if (err.code === 11000) {
+  } catch (error) {
+    if (error.code === 11000) {
       return res.status(409).json({ success: false, message: "You have already reviewed this" });
     }
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 

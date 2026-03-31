@@ -31,8 +31,12 @@ const LoginPage = () => {
         navigate("/admin");
       } else if (res.data.user.role === "provider") {
         navigate("/service-provider");
+      } else if (res.data.user.role === "counter") {
+        navigate("/counter-dashboard");
+      } else if (res.data.user.role === "reception") {
+        navigate("/reception-dashboard");
       } else {
-        navigate("/");
+        navigate("/user-dashboard");
       }
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
@@ -92,6 +96,11 @@ const LoginPage = () => {
                 autoComplete="current-password"
                 required
               />
+              <div className="forgot-pw-wrapper">
+                <Link to="/forgot-password" title="Recover your password" className="btn-forgot-pw">
+                  Forgot Password?
+                </Link>
+              </div>
             </div>
 
             <button type="submit" className="btn-signin" disabled={loading}>

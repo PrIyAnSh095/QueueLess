@@ -36,5 +36,21 @@
 .ud-ticket-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .ud-ticket-service { color: #f1f5f9; font-weight: 600; font-size: 15px; }
 .ud-ticket-token { color: #a78bfa; font-weight: 700; font-size: 16px; }
-.ud-ticket-org { color: #94a3b8; font-size: 13px; margin-bottom: 4px; }
-.ud-ticket-meta { color: #64748b; font-size: 12px; }
+.ud-ticket-org { color: #94a3b8; font-size: 13px; margin-bottom: 8px; }
+.ud-ticket-eta { 
+  display: flex; justify-content: space-between; align-items: center; 
+  border-top: 1px solid rgba(148,163,184,0.1); padding-top: 8px; margin-top: 6px;
+  color: #64748b; font-size: 12px; font-weight: 500;
+}
+.ud-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.ud-join-btn {
+  background: #7c3aed; color: #fff; border: none; padding: 10px 20px;
+  border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.ud-join-btn:hover { background: #6d28d9; }
+.ud-empty-placeholder {
+  background: rgba(255,255,255,0.02); border: 2px dashed rgba(148,163,184,0.1);
+  border-radius: 12px; padding: 40px; text-align: center; color: #64748b;
+}
+
+.ud-ticket-eta span:first-child { color: #10b981; font-weight: 600; }

@@ -14,6 +14,7 @@ const AllServicesPage = () => {
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
+    if (user.role === 'provider') { navigate('/service-provider'); return; }
     (async () => {
       try {
         const res = await getServices();

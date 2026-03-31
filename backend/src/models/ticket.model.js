@@ -7,6 +7,11 @@ const ticketSchema = new mongoose.Schema(
       ref: "Service",
       required: true
     },
+    queue: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Queue",
+      required: true
+    },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -18,20 +23,26 @@ const ticketSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["waiting", "served", "cancelled"],
+      enum: ["waiting", "processing", "served", "cancelled"],
       default: "waiting"
     },
-    userLocation: {
-      lat: { type: Number },
-      lng: { type: Number }
+    actualWaitDuration: {
+      type: Number // in minutes
     },
-    serviceLocation: {
-      lat: { type: Number },
-      lng: { type: Number }
+    servedAt: {
+      type: Date
     },
     /** When set, this ticket is tied to a scheduled slot (same instant for all bookings in that slot). */
     scheduledStart: {
       type: Date
+    },
+    notificationSent: {
+      type: Boolean,
+      default: false
+    },
+    userLocation: {
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: [0, 0] }
     }
   },
   { timestamps: true }

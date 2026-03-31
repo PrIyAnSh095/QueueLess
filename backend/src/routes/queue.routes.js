@@ -1,18 +1,12 @@
-// import express from "express";
-// import authMiddleware from "../middlewares/auth.middleware.js";
-// import { createQueue, getQueues } from "../controllers/queue.controller.js";
-// import roleMiddleware from "../middlewares/role.middleware.js";
+import express from "express";
+import { protect } from "../middlewares/auth.middleware.js";
+import { allowRoles } from "../middlewares/role.middleware.js";
+import { createQueue, getQueues, toggleBreak } from "../controllers/queue.controller.js";
 
+const router = express.Router();
 
-// const router = express.Router();
+router.post("/", protect, createQueue);
+router.get("/", protect, getQueues);
+router.put("/:queueId/toggle-break", protect, allowRoles("provider", "counter", "reception"), toggleBreak);
 
-// router.post(
-//   "/",
-//   authMiddleware,
-//   roleMiddleware(["ADMIN", "SUB_ADMIN"]),
-//   createQueue
-// );
-
-// router.get("/", authMiddleware, getQueues);
-
-// export default router;
+export default router;

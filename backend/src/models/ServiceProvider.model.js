@@ -50,6 +50,16 @@ const serviceProviderSchema = new mongoose.Schema({
     lng: { type: Number }
   },
 
+  pendingEdit: {
+    address: String,
+    location: {
+      lat: { type: Number },
+      lng: { type: Number }
+    },
+    photoProof: String,
+    updatedAt: { type: Date, default: Date.now }
+  },
+
   verificationDocument: {
     type: String // Cloudinary URL
   },
@@ -66,6 +76,20 @@ const serviceProviderSchema = new mongoose.Schema({
   },
 
   disableSmartWaitTime: {
+    type: Boolean,
+    default: false
+  },
+
+  flagCount: {
+    type: Number,
+    default: 0
+  },
+
+  suggestedAvgServiceTime: {
+    type: Number
+  },
+
+  avgTimeSuggestionPending: {
     type: Boolean,
     default: false
   }

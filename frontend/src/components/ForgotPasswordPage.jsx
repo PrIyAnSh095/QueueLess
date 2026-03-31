@@ -50,7 +50,7 @@ const ForgotPasswordPage = () => {
           <div className="login-header">
             <h1 className="login-title">{step === 1 ? 'Forgot Password' : 'Reset Password'}</h1>
             <p className="login-subtitle">
-              {step === 1 ? 'Enter your email to receive a reset code' : 'Enter the OTP and your new password'}
+              {step === 1 ? 'Enter your email to receive a reset code' : 'Enter the verification code and your new password'}
             </p>
           </div>
           {error && <div className="error-banner">{error}</div>}
@@ -63,14 +63,14 @@ const ForgotPasswordPage = () => {
                 <input type="email" className="form-input" placeholder="Enter your email" value={email} onChange={e => setEmail(e.target.value)} required />
               </div>
               <button type="submit" className="btn-signin" disabled={loading}>
-                {loading ? 'Sending...' : 'Send OTP'}
+                {loading ? 'Sending...' : 'Send Verification Code'}
               </button>
             </form>
           ) : (
             <form className="login-form" onSubmit={handleResetPassword}>
               <div className="form-group">
-                <label className="form-label">OTP Code</label>
-                <input type="text" className="form-input" placeholder="Enter 6-digit OTP" value={otp} onChange={e => setOtp(e.target.value)} maxLength={6} required />
+                <label className="form-label">Verification Code</label>
+                <input type="text" className="form-input" placeholder="Enter 6-digit code" value={otp} onChange={e => setOtp(e.target.value)} maxLength={6} required />
               </div>
               <div className="form-group">
                 <label className="form-label">New Password</label>

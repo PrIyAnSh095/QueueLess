@@ -44,11 +44,11 @@
 .register-card {
   width: 100%;
   max-width: 460px;
-  background: #ffffff;
+  background: #1a1f3a;
   border-radius: 26px;
   padding: 3rem 3rem 2.25rem;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 18px 55px rgba(2, 6, 23, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.45);
 }
 
 .register-header {
@@ -60,13 +60,13 @@
   font-size: 2.4rem;
   font-weight: 800;
   margin-bottom: 0.65rem;
-  color: #0f172a;
+  color: #ffffff;
   letter-spacing: -0.02em;
 }
 
 .register-subtitle {
   font-size: 1.05rem;
-  color: rgba(15, 23, 42, 0.6);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .register-form {
@@ -84,28 +84,28 @@
 .form-label {
   font-size: 1rem;
   font-weight: 700;
-  color: rgba(15, 23, 42, 0.9);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .form-input {
   padding: 0.95rem 1.05rem;
   border-radius: 14px;
-  border: 1px solid rgba(15, 23, 42, 0.14);
-  background: #ffffff;
-  color: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
   font-size: 1.05rem;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .form-input::placeholder {
-  color: rgba(15, 23, 42, 0.35);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .form-input:focus {
-  border-color: rgba(79, 70, 229, 0.6);
+  border-color: rgba(102, 126, 234, 0.6);
   box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.18);
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Radio Button Styles */
@@ -121,17 +121,17 @@
   gap: 0.75rem;
   cursor: pointer;
   padding: 0.85rem 1.25rem;
-  border: 2px solid rgba(15, 23, 42, 0.14);
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
   transition: all 0.2s ease;
   flex: 1;
   position: relative;
 }
 
 .radio-option:hover {
-  border-color: rgba(79, 70, 229, 0.4);
-  background: rgba(102, 126, 234, 0.03);
+  border-color: rgba(102, 126, 234, 0.4);
+  background: rgba(102, 126, 234, 0.08);
 }
 
 .radio-option input[type="radio"] {
@@ -143,7 +143,7 @@
 .radio-custom {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(15, 23, 42, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   position: relative;
   transition: all 0.2s ease;
@@ -152,7 +152,7 @@
 
 .radio-option input[type="radio"]:checked ~ .radio-custom {
   border-color: #ff3d7f;
-  background: #ffffff;
+  background: transparent;
 }
 
 .radio-option input[type="radio"]:checked ~ .radio-custom::after {
@@ -168,7 +168,7 @@
 }
 
 .radio-option input[type="radio"]:checked ~ .radio-label {
-  color: #0f172a;
+  color: #ffffff;
   font-weight: 700;
 }
 
@@ -179,13 +179,13 @@
 
 .radio-option:has(input[type="radio"]:checked) {
   border-color: rgba(255, 61, 127, 0.4);
-  background: rgba(255, 61, 127, 0.05);
+  background: rgba(255, 61, 127, 0.1);
 }
 
 .radio-label {
   font-size: 1rem;
   font-weight: 600;
-  color: rgba(15, 23, 42, 0.7);
+  color: rgba(255, 255, 255, 0.7);
   transition: all 0.2s ease;
 }
 
@@ -226,7 +226,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: rgba(15, 23, 42, 0.45);
+  color: rgba(255, 255, 255, 0.45);
   font-weight: 700;
   margin: 1.35rem 0 0.25rem;
 }
@@ -236,7 +236,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .divider span {
@@ -246,7 +246,7 @@
 .register-footer-text {
   margin-top: 1.15rem;
   text-align: center;
-  color: rgba(15, 23, 42, 0.65);
+  color: rgba(255, 255, 255, 0.65);
   font-weight: 600;
 }
 
@@ -285,7 +285,7 @@
 
 .helper-text-reg {
   font-size: 0.85rem;
-  color: rgba(15, 23, 42, 0.5);
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 0.5rem;
   font-style: italic;
 }
@@ -298,6 +298,50 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+.location-picker-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.search-box-map {
+  position: relative;
+  z-index: 1001;
+}
+
+.map-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #1a1f3a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  margin-top: 0.25rem;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 2000;
+}
+
+.suggestion-item {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: #ffffff;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.2s;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background: rgba(102, 126, 234, 0.08);
 }
 
 @media (max-width: 480px) {
@@ -323,3 +367,75 @@
   }
 }
 
+.drag-drop-zone {
+  position: relative;
+  border: 2px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.drag-drop-zone:hover, .drag-drop-zone.active {
+  background: rgba(255, 61, 127, 0.03);
+  border-color: rgba(255, 61, 127, 0.4);
+}
+
+.drag-drop-zone.active {
+  transform: scale(1.02);
+}
+
+.drag-drop-zone.has-file {
+  border-color: #059669;
+  background: rgba(5, 150, 105, 0.03);
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.upload-icon {
+  color: #ff3d7f;
+  margin-bottom: 0.25rem;
+}
+
+.upload-text-reg {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.upload-text-reg strong {
+  color: #ff3d7f;
+  font-weight: 700;
+}
+
+.upload-text-reg span {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+  opacity: 0.6;
+}
+
+.file-info-reg {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-name-reg {
+  color: #059669;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.file-hint-reg {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 0.2rem;
+}

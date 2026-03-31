@@ -1,90 +1,134 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './AdminDashboard.css';
-import { adminListServices, adminSetServiceApproval } from "../services/api";
-
+import { 
+  getAdminDashboardDataAPI, 
+  adminApproveOrgAPI, 
+  adminRejectOrgAPI,
+  adminSetServiceApproval 
+} from "../services/api";
+import { SkeletonCard, SkeletonLine, SkeletonGrid } from './Skeleton';
+import { useAdminSocket } from '../utils/useSocket';
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [showModal, setShowModal] = useState(false);
-  const [selectedCertUrl, setSelectedCertUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [services, setServices] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [reviewService, setReviewService] = useState(null);
 
-  const fetchServices = async () => {
+  const fetchDashboardData = async (isPolling = false) => {
     try {
-      setLoading(true);
+      if (!isPolling) setLoading(true);
       setError("");
-      const res = await adminListServices();
-      setServices(res.data?.data || []);
+      const res = await getAdminDashboardDataAPI();
+      setDashboardData(res.data?.data || null);
     } catch (e) {
-      setError(e.response?.data?.message || "Failed to load services for approval");
+      setError(e.response?.data?.message || "Failed to load dashboard data");
     } finally {
-      setLoading(false);
+      if (!isPolling) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchServices();
+    fetchDashboardData();
+    const interval = setInterval(() => {
+      fetchDashboardData(true);
+    }, 30000); 
+
+    return () => clearInterval(interval);
   }, []);
 
-  const pendingServices = useMemo(
-    () => services.filter((s) => s.approvalStatus === "pending"),
-    [services]
-  );
+  useAdminSocket(() => {
+    fetchDashboardData(true);
+  });
 
   const stats = useMemo(() => {
+    if (!dashboardData) return [];
+    const { stats: s } = dashboardData;
+    const allServices = dashboardData.allServices || [];
+    const editRequests = allServices.filter(svc => svc.approvalStatus === 'pending_edit').length;
+    
     return [
-      { icon: '💼', value: String(services.length), label: 'Total Services', desc: 'Services submitted by providers', change: '', color: 'emerald' },
-      { icon: '🕐', value: String(pendingServices.length), label: 'Pending Approvals', desc: 'Services awaiting verification', change: '', color: 'emerald' },
+      { icon: '👥', value: String(s.totalUsers), label: 'Total Users', desc: 'Registered customers', color: 'blue' },
+      { icon: '🏢', value: String(s.totalOrgs), label: 'Organizations', desc: `${s.pendingOrgs} pending`, color: 'emerald' },
+      { icon: '💼', value: String(s.totalServices), label: 'Services', desc: `${s.pendingServices + editRequests} requests`, color: 'purple' },
+      { icon: '🎫', value: String(s.totalTickets), label: 'Total Tickets', desc: 'Queue bookings', color: 'orange' },
     ];
-  }, [services.length, pendingServices.length]);
+  }, [dashboardData]);
 
-  const bookings = [
-    { org: 'MediCare Solutions', service: 'Home Healthcare', user: 'John Smith' },
-    { org: 'CleanPro Services', service: 'Office Cleaning', user: 'Sarah Johnson' },
-    { org: 'TechFix Ltd', service: 'Computer Repair', user: 'Mike Wilson' },
-    { org: 'GreenScape Gardens', service: 'Garden Maintenance', user: 'Emily Davis' },
-    { org: 'SecureGuard Inc', service: 'Event Security', user: 'Robert Brown' }
-  ];
+  const onApproveOrg = async (id) => {
+    try {
+      await adminApproveOrgAPI(id);
+      fetchDashboardData();
+    } catch (e) {
+      setError("Failed to approve organization");
+    }
+  };
 
-  const organizations = [
-    { name: 'MediCare Solutions', email: 'contact@medicare-solutions.com' },
-    { name: 'CleanPro Services', email: 'info@cleanproservices.com' },
-    { name: 'TechFix Ltd', email: 'support@techfixltd.com' },
-    { name: 'GreenScape Gardens', email: 'hello@greenscapegardens.com' },
-    { name: 'SecureGuard Inc', email: 'inquiries@secureguard.com' },
-    { name: 'PetCare Plus', email: 'care@petcareplus.com' }
-  ];
+  const onRejectOrg = async (id) => {
+    try {
+      await adminRejectOrgAPI(id);
+      fetchDashboardData();
+    } catch (e) {
+      setError("Failed to reject organization");
+    }
+  };
+
+  const onApproveService = async (id) => {
+    try {
+      await adminSetServiceApproval(id, "approved");
+      setReviewService(null);
+      fetchDashboardData();
+    } catch (e) {
+      setError("Failed to approve service");
+    }
+  };
+
+  const onRejectService = async (id) => {
+    try {
+      await adminSetServiceApproval(id, "rejected");
+      setReviewService(null);
+      fetchDashboardData();
+    } catch (e) {
+      setError("Failed to reject service");
+    }
+  };
+
+  if (loading || !dashboardData) {
+    return (
+      <div className="admin-dark loading-state">
+        <div className="skeleton-header">
+           <SkeletonLine width="300px" height="40px" />
+           <SkeletonLine width="200px" height="20px" />
+        </div>
+        <div className="stats-grid">
+           {[1,2,3,4].map(i => <SkeletonCard key={i} lines={2} />)}
+        </div>
+        <div className="tab-skeleton" style={{ marginTop: '2rem' }}>
+           <SkeletonLine height="50px" />
+           <div style={{ marginTop: '1rem' }}>
+              <SkeletonGrid count={3} lines={5} />
+           </div>
+        </div>
+      </div>
+    );
+  }
+
+  const groupedData = dashboardData.groupedData || [];
+  const allServices = dashboardData.allServices || [];
+  const pendingOrgs = groupedData.filter(org => org.status === 'pending');
+  const serviceRequests = allServices.filter(s => ['pending', 'pending_edit'].includes(s.approvalStatus));
 
   const formatDate = (iso) => {
     try {
       return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
-    } catch {
-      return "";
-    }
-  };
-
-  const statusLabel = (approvalStatus) => {
-    if (approvalStatus === "approved") return "Approved";
-    if (approvalStatus === "rejected") return "Rejected";
-    return "Pending";
-  };
-
-  const onApproveReject = async (serviceId, nextStatus) => {
-    try {
-      setError("");
-      await adminSetServiceApproval(serviceId, nextStatus);
-      await fetchServices();
-    } catch (e) {
-      setError(e.response?.data?.message || "Failed to update approval status");
-    }
+    } catch { return ""; }
   };
 
   return (
     <div className="admin-dark">
       <div className="top-bar">
-        <h1>Dashboard Overview</h1>
-        <span className="welcome">Welcome back, Admin</span>
+        <h1>Admin Control Panel</h1>
+        <span className="welcome">System Status: Active</span>
       </div>
 
       <div className="stats-grid">
@@ -92,7 +136,6 @@ const AdminDashboard = () => {
           <div key={i} className="stat-card">
             <div className="stat-header">
               <div className={`stat-icon ${s.color}`}>{s.icon}</div>
-              {s.change ? <span className="stat-change">{s.change}</span> : <span className="stat-change" />}
             </div>
             <h2>{s.value}</h2>
             <h3>{s.label}</h3>
@@ -105,279 +148,235 @@ const AdminDashboard = () => {
         <button className={activeTab === 'dashboard' ? 'active' : ''} onClick={() => setActiveTab('dashboard')}>
           Dashboard
         </button>
-        <button className={activeTab === 'pending' ? 'active' : ''} onClick={() => setActiveTab('pending')}>
-          Pending Requests ({pendingServices.length})
+        <button className={activeTab === 'orgs' ? 'active' : ''} onClick={() => setActiveTab('orgs')}>
+          Organizations ({pendingOrgs.length} Pending)
         </button>
-        <button className={activeTab === 'organizations' ? 'active' : ''} onClick={() => setActiveTab('organizations')}>
-          Organizations
+        <button className={activeTab === 'services' ? 'active' : ''} onClick={() => setActiveTab('services')}>
+          Service Requests ({serviceRequests.length})
         </button>
-        <button className={activeTab === 'bookings' ? 'active' : ''} onClick={() => setActiveTab('bookings')}>
-          Recent Bookings
+        <button className={activeTab === 'queues' ? 'active' : ''} onClick={() => setActiveTab('queues')}>
+          Live Queues
         </button>
       </div>
 
       <div className="tab-content">
-        {error ? (
-          <div className="section">
-            <div className="section-header">
-              <div className="header-left">
-                <span className="icon">⚠️</span>
-                <div>
-                  <h2>Something went wrong</h2>
-                  <p>{error}</p>
-                </div>
-              </div>
-            </div>
-            <button className="approve" onClick={fetchServices} disabled={loading}>
-              {loading ? "Loading..." : "Retry"}
-            </button>
-          </div>
-        ) : null}
+        {error && <div className="error-banner">{error}</div>}
 
         {activeTab === 'dashboard' && (
           <div className="section">
-            <div className="section-header">
-              <div className="header-left">
-                <span className="icon">📄</span>
-                <div>
-                  <h2>Organization Verification</h2>
-                  <p>Review and approve service registration requests from organizations</p>
+            <h2>System Overview</h2>
+            <div className="grouped-grid">
+              {groupedData.map(org => (
+                <div key={org._id} className="org-group-box">
+                  <div className="org-header-mini">
+                    <h3>{org.businessName}</h3>
+                    <span className={`badge ${org.status}`}>{org.status}</span>
+                  </div>
+                  <div className="org-services-list">
+                    {org.services?.length === 0 ? <p className="small-text">No services</p> : 
+                      org.services?.map(s => (
+                        <div key={s._id} className="service-mini-item">
+                          <span>{s.serviceName}</span>
+                          <span className="queue-count">{s.tickets?.length || 0} waiting</span>
+                        </div>
+                      ))
+                    }
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'orgs' && (
+          <div className="section">
+            <h2>Organization Approvals</h2>
             <table>
               <thead>
                 <tr>
-                  <th>Organization</th>
-                  <th>Service</th>
-                  <th>Certificate</th>
+                  <th>Business Name</th>
+                  <th>Owner</th>
                   <th>Submitted</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={6}><strong>Loading services...</strong></td>
+                {groupedData.map(org => (
+                  <tr key={org._id}>
+                    <td>
+                      <div className="org-main-info">
+                        <strong>{org.businessName}</strong>
+                        {org.verificationDocument && (
+                          <a href={org.verificationDocument} target="_blank" rel="noreferrer" className="doc-link">
+                            View Document 📄
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                    <td>{org.user?.name} ({org.user?.email})</td>
+                    <td>{formatDate(org.createdAt)}</td>
+                    <td><span className={`badge ${org.status}`}>{org.status}</span></td>
+                    <td>
+                      {org.status === 'pending' && (
+                        <div className="actions">
+                          <button className="approve" onClick={() => onApproveOrg(org._id)}>Approve</button>
+                          <button className="reject" onClick={() => onRejectOrg(org._id)}>Reject</button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
-                ) : services.length === 0 ? (
-                  <tr>
-                    <td colSpan={6}><strong>No services found.</strong></td>
-                  </tr>
-                ) : (
-                  services.map((s) => {
-                    const orgName = s.organization?.name || s.organization?.email || "Unknown";
-                    const label = statusLabel(s.approvalStatus);
-                    return (
-                      <tr key={s._id}>
-                        <td><strong>{orgName}</strong></td>
-                        <td>{s.serviceName}</td>
-                        <td>
-                          {s.certificateUrl ? (
-                            <button
-                              className="view-btn"
-                              onClick={() => {
-                                setSelectedCertUrl(`http://localhost:5000${s.certificateUrl}`);
-                                setShowModal(true);
-                              }}
-                            >
-                              👁 View
-                            </button>
-                          ) : (
-                            <span className="no-action">No file</span>
-                          )}
-                        </td>
-                        <td>{formatDate(s.createdAt)}</td>
-                        <td>
-                          <span className={`badge ${label.toLowerCase()}`}>{label}</span>
-                        </td>
-                        <td>
-                          {s.approvalStatus === "pending" ? (
-                            <div className="actions">
-                              <button className="approve" onClick={() => onApproveReject(s._id, "approved")}>✓ Approve</button>
-                              <button className="reject" onClick={() => onApproveReject(s._id, "rejected")}>✕ Reject</button>
-                            </div>
-                          ) : (
-                            <span className="no-action">No actions available</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         )}
 
-        {activeTab === 'pending' && (
+        {activeTab === 'services' && (
           <div className="section">
-            <div className="section-header">
-              <div className="header-left">
-                <span className="icon">⏳</span>
-                <div>
-                  <h2>Pending Verification Requests</h2>
-                  <p>Services waiting for admin approval</p>
-                </div>
-              </div>
-            </div>
+            <h2>Service Approvals & Edits</h2>
             <table>
               <thead>
                 <tr>
+                  <th>Service Name</th>
                   <th>Organization</th>
-                  <th>Service</th>
-                  <th>Certificate</th>
                   <th>Submitted</th>
-                  <th>Status</th>
+                  <th>Type</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={6}><strong>Loading services...</strong></td>
+                {serviceRequests.map(s => (
+                  <tr key={s._id}>
+                    <td>
+                      <div className="service-main-info">
+                        <strong>{s.serviceName}</strong>
+                        {s.approvalStatus === 'pending' && s.certificate && (
+                          <a href={s.certificate} target="_blank" rel="noreferrer" className="doc-link">
+                            View Cert 📄
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                    <td>{s.organization?.businessName || s.organizationId?.businessName}</td>
+                    <td>{formatDate(s.createdAt)}</td>
+                    <td>
+                       <span className={`badge ${s.approvalStatus}`}>
+                          {s.approvalStatus === 'pending_edit' ? 'Edit Request' : 'New Service'}
+                       </span>
+                    </td>
+                    <td>
+                      <div className="actions">
+                         {s.approvalStatus === 'pending_edit' ? (
+                            <button className="review-btn" onClick={() => setReviewService(s)}>Review Changes</button>
+                         ) : (
+                            <>
+                               <button className="approve" onClick={() => onApproveService(s._id)}>Approve</button>
+                               <button className="reject" onClick={() => onRejectService(s._id)}>Reject</button>
+                            </>
+                         )}
+                      </div>
+                    </td>
                   </tr>
-                ) : pendingServices.length === 0 ? (
-                  <tr>
-                    <td colSpan={6}><strong>No pending services.</strong></td>
-                  </tr>
-                ) : (
-                  pendingServices.map((s) => {
-                    const orgName = s.organization?.name || s.organization?.email || "Unknown";
-                    return (
-                      <tr key={s._id}>
-                        <td><strong>{orgName}</strong></td>
-                        <td>{s.serviceName}</td>
-                        <td>
-                          {s.certificateUrl ? (
-                            <button
-                              className="view-btn"
-                              onClick={() => {
-                                setSelectedCertUrl(`http://localhost:5000${s.certificateUrl}`);
-                                setShowModal(true);
-                              }}
-                            >
-                              👁 View
-                            </button>
-                          ) : (
-                            <span className="no-action">No file</span>
-                          )}
-                        </td>
-                        <td>{formatDate(s.createdAt)}</td>
-                        <td><span className="badge pending">Pending</span></td>
-                        <td>
-                          <div className="actions">
-                            <button className="approve" onClick={() => onApproveReject(s._id, "approved")}>✓ Approve</button>
-                            <button className="reject" onClick={() => onApproveReject(s._id, "rejected")}>✕ Reject</button>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === 'queues' && (
+          <div className="section">
+            <h2>Live Queue Monitor</h2>
+            <div className="queues-container">
+              {groupedData.flatMap(org => 
+                org.services.filter(s => s.tickets?.length > 0 || s.queues?.some(q => q.currentServingNumber > 0)).map(s => (
+                  <div key={s._id} className="queue-monitor-card">
+                    <div className="qm-header">
+                      <div className="qm-org-name">{org.businessName}</div>
+                      <h4 className="qm-svc-name">{s.serviceName}</h4>
+                    </div>
+                    <div className="qm-body">
+                      {s.queues?.map(q => (
+                        <div key={q._id} className="qm-q-stat">
+                           <div className="qm-q-name">{q.queueName}</div>
+                           <div className="qm-row">
+                              <span className="qm-label">Serving</span>
+                              <span className="qm-value highlighted">#{q.currentServingNumber || 'None'}</span>
+                           </div>
+                           <div className="qm-row">
+                              <span className="qm-label">Waiting</span>
+                              <span className="qm-value">{s.tickets.filter(t => t.queue === q._id || t.queue?._id === q._id).length}</span>
+                           </div>
+                        </div>
+                      ))}
+                      <div className="qm-tickets-preview">
+                        {s.tickets.slice(0, 3).map(t => (
+                          <div key={t._id} className="qm-ticket-row">
+                            <span>#{t.tokenNumber}</span>
+                            <span>{t.user?.name}</span>
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === 'bookings' && (
-          <div className="section">
-            <div className="section-header">
-              <div className="header-left">
-                <span className="icon">📅</span>
-                <div>
-                  <h2>Recent Bookings</h2>
-                  <p>Overview of the most recent service bookings on the platform</p>
-                </div>
-              </div>
+                        ))}
+                        {s.tickets.length > 3 && <div className="qm-more">+{s.tickets.length - 3} more</div>}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Organization</th>
-                  <th>Service</th>
-                  <th>User</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.map((b, i) => (
-                  <tr key={i}>
-                    <td><strong>{b.org}</strong></td>
-                    <td>{b.service}</td>
-                    <td>{b.user}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === 'organizations' && (
-          <div className="section">
-            <div className="section-header">
-              <div className="header-left">
-                <span className="icon">🏢</span>
-                <div>
-                  <h2>Organizations</h2>
-                  <p>All registered organizations on the service booking platform</p>
-                </div>
-              </div>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Organization</th>
-                  <th>Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                {organizations.map((o, i) => (
-                  <tr key={i}>
-                    <td><strong>{o.name}</strong></td>
-                    <td>{o.email}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
       </div>
 
-      {showModal && (
-        <div className="modal" onClick={() => setShowModal(false)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Certificate Document</h3>
-              <button onClick={() => setShowModal(false)}>✕</button>
-            </div>
-            <div className="modal-body">
-              <div className="cert-preview">
-                {selectedCertUrl ? (
-                  <>
-                    <p><strong>Preview</strong></p>
-                    <small>{selectedCertUrl}</small>
-                  </>
-                ) : (
-                  <>
-                    📄
-                    <p>No document</p>
-                    <small>Upload missing</small>
-                  </>
-                )}
+      {reviewService && (
+        <div className="modal-overlay">
+           <div className="review-modal">
+              <div className="modal-hdr">
+                 <h2>Review Service Changes</h2>
+                 <button onClick={() => setReviewService(null)}><X size={20} /></button>
+              </div>
+              <div className="review-scroll-area">
+                 <div className="comparison-grid">
+                    <div className="compare-col">
+                       <h3>Current (Live)</h3>
+                       <div className="val-box">
+                          <label>Name</label>
+                          <p>{reviewService.serviceName}</p>
+                       </div>
+                       <div className="val-box">
+                          <label>Description</label>
+                          <p>{reviewService.description}</p>
+                       </div>
+                       <div className="val-box">
+                          <label>Address</label>
+                          <p>{reviewService.address || 'N/A'}</p>
+                       </div>
+                    </div>
+                    <div className="compare-col new">
+                       <h3>Proposed Changes</h3>
+                       <div className="val-box">
+                          <label>Name</label>
+                          <p className={reviewService.serviceName !== reviewService.pendingEdit.serviceName ? 'changed' : ''}>{reviewService.pendingEdit.serviceName}</p>
+                       </div>
+                       <div className="val-box">
+                          <label>Description</label>
+                          <p className={reviewService.description !== reviewService.pendingEdit.description ? 'changed' : ''}>{reviewService.pendingEdit.description}</p>
+                       </div>
+                       <div className="val-box">
+                          <label>Address</label>
+                          <p className={reviewService.address !== reviewService.pendingEdit.address ? 'changed' : ''}>{reviewService.pendingEdit.address}</p>
+                       </div>
+                    </div>
+                 </div>
+                 <div className="proof-section">
+                    <h3>Photo Proof of Change</h3>
+                    <img src={reviewService.pendingEdit.photoProof} alt="Proof" className="proof-img" />
+                 </div>
               </div>
               <div className="modal-actions">
-                {selectedCertUrl ? (
-                  <a className="download" href={selectedCertUrl} target="_blank" rel="noreferrer">
-                    Open / Download
-                  </a>
-                ) : (
-                  <button className="download" disabled>Download</button>
-                )}
-                <button className="close" onClick={() => setShowModal(false)}>Close</button>
+                 <button className="approve" onClick={() => onApproveService(reviewService._id)}>Approve Changes</button>
+                 <button className="reject" onClick={() => onRejectService(reviewService._id)}>Reject Changes</button>
               </div>
-            </div>
-          </div>
+           </div>
         </div>
       )}
     </div>

@@ -1,23 +1,53 @@
-import cloudinary from "../config/cloudinary.config.js";
+import cloudinary from "../config/cloudinary.js";
+import { Readable } from "stream";
 
-export async function uploadImage(fileBuffer, folder = "queueless") {
+export const uploadToCloudinary = (fileBuffer, folder = "queueless") => {
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder, resource_type: "image" },
+    console.log("➡️ Cloudinary upload function called");
+
+    if (!fileBuffer) {
+      console.log("❌ File buffer is missing");
+      return reject(new Error("File buffer is missing"));
+    }
+
+    console.log("📊 Buffer size:", fileBuffer.length);
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: "auto" },
       (error, result) => {
-        if (error) return reject(error);
-        resolve({ url: result.secure_url, publicId: result.public_id });
+        if (error) {
+          console.error("❌ Cloudinary Error:", error);
+          return reject(error);
+        }
+
+        console.log("✅ Cloudinary response:", result);
+
+        resolve({
+          url: result.secure_url,
+          public_id: result.public_id
+        });
       }
     );
-    stream.end(fileBuffer);
-  });
-}
 
-export async function deleteImage(publicId) {
+    const readableStream = new Readable({
+      read() { }
+    });
+
+    console.log("🔄 Converting buffer to stream...");
+
+    readableStream.push(fileBuffer);
+    readableStream.push(null);
+
+    console.log("🚀 Piping to Cloudinary...");
+
+    readableStream.pipe(uploadStream);
+  });
+};
+
+export const deleteFromCloudinary = async (publicId) => {
   try {
     await cloudinary.uploader.destroy(publicId);
-    return true;
-  } catch {
-    return false;
+  } catch (error) {
+    console.error("Cloudinary delete error:", error);
   }
-}
+};

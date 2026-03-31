@@ -13,6 +13,7 @@ const ReviewSection = ({ targetType, targetId }) => {
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [imageFiles, setImageFiles] = useState([]);
 
   const fetchReviews = async () => {
     try {
@@ -30,8 +31,16 @@ const ReviewSection = ({ targetType, targetId }) => {
     try {
       setSubmitting(true);
       setError('');
-      await createReviewAPI({ targetType, targetId, rating, comment });
-      setRating(0); setComment('');
+
+      const formData = new FormData();
+      formData.append('targetType', targetType);
+      formData.append('targetId', targetId);
+      formData.append('rating', rating);
+      if (comment) formData.append('comment', comment);
+      imageFiles.forEach((file) => formData.append('images', file));
+
+      await createReviewAPI(formData);
+      setRating(0); setComment(''); setImageFiles([]);
       fetchReviews();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit review');
@@ -73,6 +82,23 @@ const ReviewSection = ({ targetType, targetId }) => {
             onChange={e => setComment(e.target.value)}
             rows={3}
           />
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="review-image-input"
+            onChange={e => setImageFiles(Array.from(e.target.files))}
+          />
+          {imageFiles.length > 0 && (
+            <div className="review-image-preview-row">
+              {imageFiles.map((file, idx) => (
+                <div key={idx} className="review-image-preview">
+                  <img src={URL.createObjectURL(file)} alt={`preview-${idx}`} />
+                  <button type="button" onClick={() => setImageFiles(prev => prev.filter((_, j) => j !== idx))}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
           {error && <div className="review-error">{error}</div>}
           <button className="review-submit-btn" onClick={handleSubmit} disabled={submitting}>
             {submitting ? 'Submitting...' : 'Submit Review'}
@@ -95,6 +121,13 @@ const ReviewSection = ({ targetType, targetId }) => {
               <span className="review-date">{new Date(r.createdAt).toLocaleDateString()}</span>
             </div>
             {r.comment && <p className="review-text">{r.comment}</p>}
+            {r.images?.length > 0 && (
+              <div className="review-images-row">
+                {r.images.map((img, idx) => (
+                  <img key={idx} src={img.url || img} alt={`review-${idx}`} className="review-thumb" />
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
