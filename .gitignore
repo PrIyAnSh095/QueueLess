@@ -1,22 +1,21 @@
-<<<<<<< HEAD
-# Dependencies
+# Dependencies — never commit; Vercel/Render run npm install
 node_modules/
-/.pnp
-.pnp.js
 
-# Testing
-/coverage
-
-# Production
-/build
-/dist
-
-# Misc
-.DS_Store
+# Environment & secrets
+.env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Build output — generated on deploy
+dist/
+build/
+
+# Uploads (local dev only; production uses Cloudinary)
+uploads/
 
 # Logs
 npm-debug.log*
@@ -25,19 +24,17 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Editor directories and files
+# Test coverage
+coverage/
+
+# OS & editors
+.DS_Store
+Thumbs.db
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-=======
-node_modules/ 
-.env
-dist/
-build/
->>>>>>> 56fca042aef5bb4f5815bce172ee491fef72bbb3
