@@ -4,6 +4,7 @@ import User from "../models/user.model.js";
 import Counter from "../models/Counter.model.js";
 import Ticket from "../models/ticket.model.js";
 import Queue from "../models/queue.model.js";
+
 import bcrypt from "bcryptjs";
 import { uploadToCloudinary } from "../services/cloudinary.service.js";
 import QueueHistory from "../models/QueueHistory.model.js";
@@ -181,12 +182,18 @@ export const getOrgStats = async (req, res) => {
     const services = await Service.find({ organizationId: org._id });
     const serviceIds = services.map(s => s._id);
 
-    const [totalBookings, activeBookings, completedBookings, totalCounters] = await Promise.all([
+    const [totalBookings, activeBookings, completedBookings, totalCounters, queues] = await Promise.all([
       Ticket.countDocuments({ service: { $in: serviceIds } }),
       Ticket.countDocuments({ service: { $in: serviceIds }, status: "waiting" }),
       Ticket.countDocuments({ service: { $in: serviceIds }, status: "served" }),
-      Counter.countDocuments({ organization: org._id })
+      Counter.countDocuments({ organization: org._id }),
+      Queue.find({ serviceId: { $in: serviceIds } }).select("avgServiceTime")
     ]);
+
+    // Compute average configured service time across all queues
+    const configuredAvgServiceTime = queues.length > 0
+      ? Math.round(queues.reduce((sum, q) => sum + (q.avgServiceTime || 15), 0) / queues.length)
+      : 15;
 
     return res.json({
       success: true,
@@ -196,7 +203,8 @@ export const getOrgStats = async (req, res) => {
         totalBookings,
         activeBookings,
         completedBookings,
-        totalCounters
+        totalCounters,
+        configuredAvgServiceTime
       }
     });
   } catch (err) {
@@ -576,3 +584,107 @@ export const getPublicOrganizations = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+export const getOrgCharts = async (req, res) => {
+  try {
+    const org = await ServiceProvider.findOne({ user: req.user._id });
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+
+    const services = await Service.find({ organizationId: org._id }).select("_id serviceName");
+    const serviceIds = services.map(s => s._id);
+
+    // 1. Daily bookings for last 14 days
+    const since14 = new Date();
+    since14.setDate(since14.getDate() - 13);
+    since14.setHours(0, 0, 0, 0);
+
+    const dailyRaw = await Ticket.aggregate([
+      { $match: { service: { $in: serviceIds }, createdAt: { $gte: since14 } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          total: { $sum: 1 },
+          served: { $sum: { $cond: [{ $eq: ["$status", "served"] }, 1, 0] } },
+          cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const dailyMap = {};
+    dailyRaw.forEach(d => { dailyMap[d._id] = d; });
+    const dailyData = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      dailyData.push({
+        date: key,
+        label,
+        total: dailyMap[key]?.total || 0,
+        served: dailyMap[key]?.served || 0,
+        cancelled: dailyMap[key]?.cancelled || 0
+      });
+    }
+
+    // 2. Per-service breakdown
+    const serviceBreakdown = await Ticket.aggregate([
+      { $match: { service: { $in: serviceIds } } },
+      {
+        $group: {
+          _id: "$service",
+          total: { $sum: 1 },
+          waiting: { $sum: { $cond: [{ $in: ["$status", ["waiting", "processing"]] }, 1, 0] } },
+          served: { $sum: { $cond: [{ $eq: ["$status", "served"] }, 1, 0] } },
+          cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } }
+        }
+      }
+    ]);
+
+    const serviceMap = {};
+    services.forEach(s => { serviceMap[s._id.toString()] = s.serviceName; });
+    const perService = serviceBreakdown.map(s => ({
+      serviceId: s._id,
+      serviceName: serviceMap[s._id.toString()] || "Unknown",
+      total: s.total,
+      waiting: s.waiting,
+      served: s.served,
+      cancelled: s.cancelled
+    }));
+
+    // 3. Hourly distribution (last 30 days)
+    const since30 = new Date();
+    since30.setDate(since30.getDate() - 30);
+
+    const hourlyRaw = await Ticket.aggregate([
+      { $match: { service: { $in: serviceIds }, status: "served", createdAt: { $gte: since30 } } },
+      { $group: { _id: { $hour: "$createdAt" }, count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const hourlyMap = {};
+    hourlyRaw.forEach(h => { hourlyMap[h._id] = h.count; });
+    const hourlyData = Array.from({ length: 24 }, (_, i) => ({
+      hour: i,
+      label: `${i.toString().padStart(2, "0")}:00`,
+      count: hourlyMap[i] || 0
+    }));
+
+    // 4. Avg wait from history
+    const historyStats = await QueueHistory.aggregate([
+      { $match: { organization: org._id, status: "served", actualWaitDuration: { $exists: true, $gt: 0 } } },
+      { $group: { _id: null, avg: { $avg: "$actualWaitDuration" }, total: { $sum: 1 } } }
+    ]);
+    const avgWaitTime = historyStats.length > 0 ? Math.round(historyStats[0].avg) : 0;
+    const totalServed = historyStats.length > 0 ? historyStats[0].total : 0;
+
+    return res.json({
+      success: true,
+      data: { dailyData, perService, hourlyData, summary: { avgWaitTime, totalServed } }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+

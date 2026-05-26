@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   getServiceById, 
-  getOrgStatsAPI,
+  getServiceStatsAPI,
   updateServiceAPI,
   deleteServiceAPI
 } from '../services/api';
+
 import { 
   ChevronLeft, 
   Settings, 
@@ -36,9 +37,10 @@ const ProviderViewService = () => {
         const res = await getServiceById(id);
         setService(res.data.data);
         
-        // Fetch some stats
-        const statsRes = await getOrgStatsAPI();
+        // Fetch per-service stats
+        const statsRes = await getServiceStatsAPI(id);
         setStats(statsRes.data.data);
+
       } catch (err) {
         console.error(err);
       } finally {
@@ -119,7 +121,7 @@ const ProviderViewService = () => {
                <div className="metric-pill">
                   <BarChart size={20} />
                   <div className="metric-text">
-                     <strong>{stats?.avgWaitTime || 0}m</strong>
+                     <strong>{stats?.avgWaitTime || stats?.configuredAvgServiceTime || 0}m</strong>
                      <span>Avg Wait</span>
                   </div>
                </div>

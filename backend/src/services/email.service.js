@@ -19,7 +19,7 @@ function getTransporter() {
 const from = () => `"QueueLess" <${process.env.SMTP_USER || "noreply@queueless.com"}>`;
 
 /**
- * Generic email sender — fixes "emailService.sendEmail is not a function"
+ * Generic email sender — 
  */
 export async function sendEmail({ to, subject, text, html }) {
   try {

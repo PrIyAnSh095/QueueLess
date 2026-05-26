@@ -36,7 +36,9 @@ export const createServiceAPI = (formData) => API.post("/services/create", formD
 export const updateServiceAPI = (id, data) => API.put(`/services/${id}`, data);
 export const requestServiceEditAPI = (id, formData) => API.post(`/services/${id}/request-edit`, formData, { headers: { "Content-Type": "multipart/form-data" } });
 export const deleteServiceAPI = (id) => API.delete(`/services/${id}`);
+export const getServiceStatsAPI = (id) => API.get(`/services/${id}/stats`);
 export const toggleQueueBreakAPI = (queueId) => API.put(`/queues/${queueId}/toggle-break`);
+
 
 // Tickets (Queue Join)
 export const requestJoinCodeAPI = (data) => API.post("/tickets/request-join-code", data);
@@ -93,7 +95,9 @@ export const getOrgCountersAPI = () => API.get("/counters");
 export const createOrgCounterAPI = (data) => API.post("/counters", data);
 export const deleteOrgCounterAPI = (id) => API.delete(`/counters/${id}`);
 export const getOrgHistoryAPI = (params) => API.get("/organizations/me/history", { params });
+export const getOrgChartsAPI = () => API.get("/organizations/me/charts");
 export const getOrgStaffAPI = () => API.get("/organizations/me/staff");
+
 export const createOrgStaffAPI = (data) => API.post("/organizations/me/staff", data);
 export const serveNextByCounterAPI = (counterId) => API.put(`/counters/${counterId}/serve-next`);
 export const completeCurrentTokenAPI = (counterId) => API.put(`/counters/${counterId}/complete`);

@@ -1,0 +1,140 @@
+==================================================
+QUEUELESS SYSTEM TEST CASES
+==================================================
+
+--------------------------------------------------
+Section 1: Authentication
+--------------------------------------------------
+Test Case ID: TC-AUTH-001
+Test Scenario: Valid user login
+Input: POST /api/auth/login with valid body { "email": "user@test.com", "password": "SecurePassword1!" }
+Expected Output: 200 OK, returns user object, and sets a JWT token in an HTTP-only cookie.
+Actual Output: 200 OK, user object returned, cookie header present.
+Result: Pass
+
+Test Case ID: TC-AUTH-002
+Test Scenario: Accessing protected profile route without a token
+Input: GET /api/auth/me with no Authorization header and no secure cookie token.
+Expected Output: 401 Unauthorized with message "No token provided".
+Actual Output: 401 Unauthorized, JSON { "message": "No token provided" }.
+Result: Pass
+
+Test Case ID: TC-AUTH-003
+Test Scenario: Forgot password execution for a non-existent email
+Input: POST /api/auth/forgot-password with { "email": "unknown@domain.com" }
+Expected Output: 404 Not Found or 400 Bad Request indicating user not found.
+Actual Output: Error response indicating missing account.
+Result: Pass
+
+--------------------------------------------------
+Section 2: Queue & Ticket
+--------------------------------------------------
+Test Case ID: TC-QT-001
+Test Scenario: A User joining a queue successfully
+Input: POST /api/tickets/join with valid Bearer/Cookie token and body containing valid serviceId.
+Expected Output: 201 Created or 200 OK, returns a generated ticket object with queue position and estimated wait time (ETA).
+Actual Output: 201 Created, ticket saved to database, response includes position and eta.
+Result: Pass
+
+Test Case ID: TC-QT-002
+Test Scenario: Attempting to join a queue they are already active in
+Input: POST /api/tickets/join using the same serviceId as an actively queued ticket.
+Expected Output: 400 Bad Request preventing duplicate active queue entries.
+Actual Output: Error JSON indicating user is already in this queue.
+Result: Pass
+
+Test Case ID: TC-QT-003
+Test Scenario: Generate a walk-in ticket physically at the location
+Input: POST /api/tickets/walk-in by a user with role provider or counter.
+Expected Output: 201 Created. Ticket generated without tying it to a registered customer account, adding them to the queue pool.
+Actual Output: 201 Created with generic walk-in ticket details.
+Result: Pass
+
+Test Case ID: TC-QT-004
+Test Scenario: Fetching live ETA for an active queue
+Input: GET /api/tickets/live-eta/:queueId using a valid queue token.
+Expected Output: 200 OK. Returns dynamic ETA calculation based on current queue length.
+Actual Output: 200 OK with { "liveEta": number } JSON response.
+Result: Pass
+
+--------------------------------------------------
+Section 3: Access Control
+--------------------------------------------------
+Test Case ID: TC-AC-001
+Test Scenario: User accesses service provider-only serve route
+Input: PUT /api/tickets/serve/:queueId by an authenticated token where role="user".
+Expected Output: 403 Forbidden. The providerOnly role middleware intercepts the request.
+Actual Output: 403 Forbidden, JSON { "message": "Service Provider access only" }.
+Result: Pass
+
+Test Case ID: TC-AC-002
+Test Scenario: Service Provider attempts to access Admin dashboard data
+Input: GET /api/admin/dashboard-data by an authenticated token where role="provider".
+Expected Output: 403 Forbidden. The adminOnly role middleware intercepts the request.
+Actual Output: 403 Forbidden, JSON { "message": "Admin access only" }.
+Result: Pass
+
+Test Case ID: TC-AC-003
+Test Scenario: Change password via Admin panel
+Input: POST /api/auth/change-password-admin by token with role="admin".
+Expected Output: 200 OK. Password changes successfully for target user ID.
+Actual Output: 200 OK, password successfully updated in DB.
+Result: Pass
+
+--------------------------------------------------
+Section 4: Notifications
+--------------------------------------------------
+Test Case ID: TC-NOT-001
+Test Scenario: Service provider reporting a delay
+Input: POST /api/tickets/report-delay/:ticketId with valid provider token over a valid ticket.
+Expected Output: 200 OK. System logs delay and dispatches push/email notifications to affected users in the queue downstream.
+Actual Output: 200 OK, notifications pushed out.
+Result: Pass
+
+Test Case ID: TC-NOT-002
+Test Scenario: Provider marks the user as served, triggering a notification event
+Input: PUT /api/tickets/serve/:queueId by the provider.
+Expected Output: 200 OK. The target user receives a "Please head to the counter" alert based on real-time event triggers.
+Actual Output: 200 OK, queue state updates, alert emitted.
+Result: Pass
+
+--------------------------------------------------
+Section 5: Database
+--------------------------------------------------
+Test Case ID: TC-DB-001
+Test Scenario: Rejecting organization address changes natively
+Input: PUT /api/admin/organizations/:id/reject-address with invalid id string (e.g. "123").
+Expected Output: 400 Bad Request or 500 Internal Error caught by the Error Handler MW (Mongoose CastError).
+Actual Output: Error JSON { "success": false, "message": "Invalid ID format" }.
+Result: Pass
+
+Test Case ID: TC-DB-002
+Test Scenario: Counter deletion updates cascade
+Input: DELETE /api/admin/counters/:id via admin token.
+Expected Output: 200 OK. The counter is dropped and related active queues or staff assignments are safely cascaded or set to null.
+Actual Output: 200 OK, dependent relations handled without ghost rows constraint errors.
+Result: Pass
+
+--------------------------------------------------
+Section 6: Edge Cases
+--------------------------------------------------
+Test Case ID: TC-EDGE-001
+Test Scenario: User tries to leave the queue after they've already been marked as "served"
+Input: PUT /api/tickets/leave/:ticketId by the customer AFTER the provider executed /api/tickets/serve/:queueId.
+Expected Output: 400 Bad Request. The system business logic should reject cancelling a ticket that has resolved naturally.
+Actual Output: 400 Bad Request indicating the ticket cannot be aborted in its current state.
+Result: Pass
+
+Test Case ID: TC-EDGE-002
+Test Scenario: Multiple concurrent walk-in additions
+Input: Firing 10 concurrent POST requests to /api/tickets/walk-in simultaneously.
+Expected Output: Database handles concurrency successfully. 10 unique, incrementing queue numbers are assigned accurately without overlaps.
+Actual Output: 10 x 201 Created responses parsed successfully, sequence is pristine.
+Result: Pass
+
+Test Case ID: TC-EDGE-003
+Test Scenario: Provide malformed/empty body attributes
+Input: POST /api/organizations passing empty strings for strictly required validations.
+Expected Output: 400 Bad Request. Validation layer halts DB operation and responds before Mongoose schema strictness failure.
+Actual Output: 400 Error providing an array/string specifying the missing components.
+Result: Pass

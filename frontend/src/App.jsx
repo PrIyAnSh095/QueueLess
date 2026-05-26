@@ -27,6 +27,8 @@ import CounterManagement from './components/CounterManagement'
 import CounterDashboard from './components/CounterDashboard'
 import ReceptionDashboard from './components/ReceptionDashboard'
 import AdminUpdateRequestsPage from './components/AdminUpdateRequestsPage'
+import OrgStatsPage from './components/OrgStatsPage'
+
 
 function App() {
   return (
@@ -59,6 +61,8 @@ function App() {
               <Route path="/service-provider/create-service" element={<ProtectedRoute requiredRole="provider"><CreateService /></ProtectedRoute>} />
               <Route path="/service-provider/counters" element={<ProtectedRoute requiredRole="provider"><CounterManagement /></ProtectedRoute>} />
               <Route path="/service-provider/manage-queues" element={<ProtectedRoute requiredRole="provider"><QueueManagementPage /></ProtectedRoute>} />
+              <Route path="/service-provider/stats" element={<ProtectedRoute requiredRole="provider"><OrgStatsPage /></ProtectedRoute>} />
+
               
               <Route path="/counter-dashboard" element={<ProtectedRoute requiredRole={['counter', 'provider', 'reception']}><CounterDashboard /></ProtectedRoute>} />
               <Route path="/reception-dashboard" element={<ProtectedRoute requiredRole={['reception', 'provider']}><ReceptionDashboard /></ProtectedRoute>} />

@@ -9,6 +9,8 @@ import {
 } from "../services/slot.service.js";
 import { sendServiceStatusEmail } from "../services/email.service.js";
 import { createNotification } from "./notification.controller.js";
+import { getServiceStats } from "../services/ticket.service.js";
+
 
 export const createService = async (req, res) => {
   try {
@@ -344,6 +346,19 @@ export const requestServiceEdit = async (req, res) => {
     await service.save();
 
     return res.json({ success: true, message: "Edit request submitted for admin approval", data: service });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getServiceStatsController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid service id" });
+    }
+    const data = await getServiceStats(id);
+    return res.json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

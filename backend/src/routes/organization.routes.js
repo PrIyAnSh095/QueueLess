@@ -11,6 +11,7 @@ import {
   getOrgQueueUsers,
   getOrgQueues,
   getOrgHistory,
+  getOrgCharts,
   getPublicOrganization,
   getPublicOrganizations,
   getOrgStaff,
@@ -19,6 +20,7 @@ import {
   acceptAvgTimeUpdate,
   uploadFile
 } from "../controllers/organization.controller.js";
+
 import { protect } from "../middlewares/auth.middleware.js";
 import { providerOnly, allowRoles } from "../middlewares/role.middleware.js";
 
@@ -40,6 +42,8 @@ router.get("/me/stats", protect, providerOnly, getOrgStats);
 router.get("/me/queue-users", protect, providerOnly, getOrgQueueUsers);
 router.get("/me/queues", protect, allowRoles("provider", "counter", "reception"), getOrgQueues);
 router.get("/me/history", protect, providerOnly, getOrgHistory);
+router.get("/me/charts", protect, providerOnly, getOrgCharts);
+
 // Staff management
 router.get("/me/staff", protect, allowRoles("provider", "counter", "reception"), getOrgStaff);
 router.post("/me/staff", protect, providerOnly, createStaffAccount);

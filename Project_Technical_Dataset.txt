@@ -1,0 +1,248 @@
+==================================================
+PROJECT TECHNICAL DATASET (FOR REPORT GENERATION)
+==================================================
+
+[1. PROJECT OVERVIEW]
+- Project type: Full-Stack Web Application (MERN Stack with Real-time & Geolocation support)
+- Purpose (based on functionality): A smart queue management and appointment scheduling system that enables users to join virtual queues, tracks real-time progress, calculates wait times (ETAs), and provides location-aware smart capabilities. Allows organizations to list services and manage multi-counter queues.
+- Core features detected: 
+  - User & Role-based Access Control (User, Provider, Admin, Counter, Reception)
+  - Organization and Service Listings
+  - Online Queue Joining & Physical Walk-ins
+  - Multi-Counter Queue Management
+  - Admin Approval / Overriding features
+  - Real-time Wait Time & ETA calculations
+  - Geofencing and Distance tracking
+  - Smart Notification Engine (crons, WebSockets)
+  - Rating & Review System
+  - Reports & Analytics (Recharts-based statistics)
+  - Secure Document/Image Verification via Cloudinary
+
+--------------------------------------------------
+
+[2. FRONTEND DETAILS]
+- Technologies used: React.js (v18.2.0), Vite (build tool), React-Router-DOM (v6), Axios, Socket.io-client, React-Leaflet (maps), Recharts (data visualization), Lucide-React (icons). Vanilla CSS for styling.
+- Folder structure:
+  - /src/components/ (UI components / Page views)
+  - /src/layout/ (Header, Footer)
+  - /src/utils/ (AuthContext, ProtectedRoute, ScrollToHash)
+  - /src/services/ (Frontend API calls extraction)
+  - /src/App.jsx (Main Router)
+- Pages/screens: 
+  - HomePage
+  - LoginPage, RegisterPage, ForgotPasswordPage
+  - AdminDashboard, SubAdminPage, AdminUpdateRequestsPage
+  - ServiceProviderPage, CreateService, CounterManagement, QueueManagementPage, OrgStatsPage
+  - ServiceDetailsDispatcher, AllServicesDispatcher, OrgDetailsDispatcher, AllOrganizationsDispatcher
+  - UserDashboard, MyTicketsPage, QueueHistoryPage
+  - CounterDashboard, ReceptionDashboard, OrgStatusPage
+- UI flow (step-by-step user journey):
+  - User registers/logs in -> Views Services/Organizations -> Selects Service -> Requests Location-Based ETA -> Joins Queue (Virtual/Scheduled) -> Receives Turn Alerts -> Gets Served -> Submits Review.
+  - Provider registers -> Fills initial Org Details -> Awaits Admin Verification -> Adds Services -> Configures Queues & Counters -> Manages "Next Token" or Walk-ins -> Checks Analytics.
+- Key UI components: ProtectedRoute wrapper, Provider Dashboards, Context-based Auth Header.
+- Dynamic behaviors (API calls, updates): 
+  - Polling or WebSocket subscription to 'queue_[queueId]' for live queue counts.
+  - Geo-location calculation utilizing react-leaflet maps to fetch ETA.
+  - File/image uploading components communicating with backend multer parsing.
+  - Interactive analytic charts (Daily tickets, wait time distribution).
+
+--------------------------------------------------
+
+[3. BACKEND DETAILS]
+- Backend technology: Node.js, Express.js, MongoDB (Mongoose ORM), Socket.io, NodeMailer, Cloudinary.
+- Server entry files: 
+  - `server.js` (Web server startup, websockets initialization, intervals for notification cron jobs)
+  - `app.js` (Express middlewares, routing bindings, global error handler)
+- Routing structure (ALL endpoints with purpose):
+  - /api/auth: Login, Register, Logout, Me, Google OAuth, Password Recovery.
+  - /api/admin: Org approvals, User histories, System-wide stats, Counter overriding.
+  - /api/organizations: Provider profiles, Document uploads, Org-specific stats/queues, Staff management.
+  - /api/services: Creating services, Retrieving bookable dates, Editing approval status.
+  - /api/tickets: Join queue, Walk-in addition, Leave queue, Get Live ETA, Serve next, Report Delays, Confirm Serve.
+  - /api/counters: Creating/deleting specific queue counters, Processing tokens at desks.
+  - /api/queues: Creating active queues, Toggling breaks.
+  - /api/notifications: Fetching alerts, managing read states.
+  - /api/search: Generic text/location queries.
+  - /api/reviews: Creating and fetching reviews with image attachments.
+  - /api/users: Modifying user geospatial location.
+- Controllers / logic: Broken down to distinct modules handling business logic matching to the above routes. Strong validation and population logics.
+- Authentication mechanism: 
+  - JWT (JSON Web Tokens) supplied via HTTP-only Cookies.
+  - Google OAuth integration.
+  - Role-based Middlewares: `protect`, `providerOnly`, `adminOnly`, `allowRoles(roles)`.
+- Middleware (if any):
+  - `auth.middleware.js` (JWT parsing)
+  - `role.middleware.js` (Authorization blocks)
+  - `upload.middleware.js` (Multer instance configuration / memory storage handling)
+
+--------------------------------------------------
+
+[4. DATABASE & STORAGE]
+- Database type: MongoDB using Mongoose Object-Relational Model.
+- Connection method: mongoose.connect() referenced via `config/db.js` using URI from `.env`.
+- Tables/Collections:
+  1. User
+    - Fields: name (String), email (String), phone (String), role (Enum: user/provider/admin/counter/reception), password (String), organizationId (ObjectId), location (GeoJSON Point).
+  2. ServiceProvider
+    - Fields: user (ObjectId), businessName (String), phone (String), address (String), location (lat/lng), verifyDocument (String), images ([url, public_id]), status (Enum), pendingEdit (Mixed).
+  3. Service
+    - Fields: organizationId (ObjectId), serviceName (String), description (String), category (String), approvalStatus (Enum), location (GeoJSON Point), status/isActive (Boolean), certificate (String).
+  4. Queue
+    - Fields: serviceId (ObjectId), queueName (String), capacity (Number), isActive (Boolean), counters ([ObjectId]), openTime (String), closeTime (String), avgServiceTime (Number), status (Enum).
+  5. Ticket
+    - Fields: service (ObjectId), queue (ObjectId), user (ObjectId), tokenNumber (Number), status (Enum: waiting, processing, served, cancelled), actualWaitDuration, servedAt, scheduledStart, userLocation (GeoJSON Point).
+  6. Counter
+    - Fields: name (String), user (ObjectId), service (ObjectId), organization (ObjectId), isActive (Boolean), currentTicket (ObjectId).
+  7. QueueHistory
+    - Fields: user (ObjectId), service (ObjectId), ticket (ObjectId), tokenNumber (Number), joinTime (Date), servedTime (Date), actualWaitDuration (Number), predictedWaitDuration (Number), status (Enum).
+  8. Review
+    - Fields: user (ObjectId), targetType (Enum: org, service, queue), targetId (ObjectId), rating (Number), images ([url, public_id]).
+  9. Otp
+    - Fields: email (String), otp (String), purpose (Enum), expiresAt (Date).
+  10. Notification
+    - Fields: user (ObjectId), type (Enum), title (String), message (String), read (Boolean), data (Mixed).
+- Relationships between entities:
+  - Users are associated with ServiceProviders if role is provider.
+  - ServiceProviders have many Services.
+  - Services have specific Queues.
+  - Queues are served by multiple Counters (assigned to specific Staff Users).
+  - Tickets bridge Users to Queues and Services.
+- Data lifecycle (how data flows): Provider registers -> Approved by Admin -> Provider adds Service -> Approved by Admin -> Provider activates Queue -> User creates Ticket on Queue -> Provider/Counter updates Ticket status -> Automatically moves ticket to QueueHistory upon termination.
+
+--------------------------------------------------
+
+[5. APIs]
+- Internal APIs:
+  - GET /api/auth/me: Returns current session user.
+  - POST /api/auth/register: Registers an account.
+  - GET /api/organizations/public: Lists public verified organizations.
+  - POST /api/tickets/join: Joins a specific queue with location tracking.
+  - GET /api/tickets/live-eta/:queueId: Calculate current wait time logic for token holder.
+  - PUT /api/tickets/serve/:queueId: Update ticket state to served and increment active queue.
+  - POST /api/reviews: Record user feedback against an organization/service.
+  - GET /api/admin/dashboard-data: Aggregate system telemetry for supers-user.
+- External APIs (if any):
+  - Google OAuth API (for Signin/Signup)
+  - Cloudinary API (for media CDN uploads in backend)
+  - OpenRouteService API (Likely used to calculate distance matrices from endpoints over maps)
+
+--------------------------------------------------
+
+[6. MODULE BREAKDOWN]
+User Module:
+- Features: Authentication, Geo-location saving, Browsing directories, Joining Queues, Viewing ETA/Wait-logs, Reviewing.
+- Flow: Login -> Services Page -> Booking Confirmation -> Track Ticket -> Feedback.
+
+Admin Module:
+- Features: View Platform wide aggregates, approve/reject Onboarding Providers, approve/reject Entity metadata changes, monitor all system users.
+- Flow: AdminDashboard -> View Pending Approvals -> Accept Organization/Service -> System Monitoring.
+
+Queue Management Module (Provider/Staff):
+- Core logic: Manages multi-desk capabilities (`Counter`). Receptions can add Walk-In offline users. Desk operators (Counters) pull the 'next' queue ticket, processes it, overriding estimates if delays are noticed.
+- Flow: Add Counters -> Toggle queue active status -> Invoke `/serve-next` on counter desk -> Complete Token.
+
+Platform Integrity Module:
+- Core logic: Background crons running over Mongoose models. Smart Notification Engine (setInterval loop triggering turn-alerts for user delays to prevent crowding), Expired Ticket removal.
+
+--------------------------------------------------
+
+[7. SYSTEM BEHAVIOR]
+- Queue handling logic: Standard FIFO or scheduled slot overlapping arrays. System auto-calculates `avgServiceTime` * `people_in_front` to project ETAs. Counters pull from array indices using state manipulations.
+- Token generation logic: Based on daily resets or incrementing max sequence found in the Queue's active tickets.
+- Real-time updates: Handled using Socket.IO instances matching `queue_[QUEUE_ID]`. Socket emissions trigger React UI re-renders on counters shifting.
+- State handling: Express acts statelessly. JWT provides identity. Global application reactivity managed by components re-fetching or receiving socket payload dispatches.
+
+--------------------------------------------------
+
+[8. COMPLETE FEATURE LIST]
+- JWT based User, Admin, Provider, Staff (Reception/Counter) Authentication
+- Google OAuth Login integration
+- Email One-Time-Password verification workflows
+- Spatial searching (2dsphere geospatial indexing queries bounding maps)
+- Image/Certificate Multi-part File Uploads natively mapping to Cloudinary
+- Complex Provider Approval mechanisms & Address change pending states
+- Custom SLA / Estimated Wait Time predictions based on live service data
+- Virtual Ticket creation via app with Scheduled OR Walk-In constraints
+- Socket.io connected Queue dashboards (Live Queue progression)
+- Multi-desktop counter logic allocating sub-tasks to providers' staff
+- Notification center (Automated system emails and in-app alerts on events such as 'turn-alert')
+- Dedicated Rating/Review module mapping distinct target entity topologies
+- Historical aggregations bridging ReCharts React elements
+- Automated Data Archiving moving 'served' tickets to abstract History collections
+
+--------------------------------------------------
+
+[9. UI / OUTPUT SCREENS]
+- Landing / Home Page
+- Login, Register, Forgot Password
+- Admin Dashboard (Platform Aggregates)
+- Admin Update Requests (Listing Pending Modifications)
+- SubAdmin Management
+- Service Provider Profile / Setup
+- Provider Service Creation Form
+- Provider Queue Configurations
+- Provider Organization Stats (Graphs / Charts)
+- All Organizations Directory
+- All Services Directory (Filterable map views)
+- Detailed specific Organization/Service view
+- Queue Joining / ETA overlay
+- End-User Profile / Dashboard
+- User's Active Tickets Matrix
+- User's Historic Tickets log
+- Org Counter Desk control screen
+- Reception Walk-in Desk screen
+
+--------------------------------------------------
+
+[10. TESTING DATA (VERY IMPORTANT)]
+Test scenarios:
+- Valid user flow: Normal login, successfully create a walk-in token when queue matches active business hours.
+- Invalid inputs: Sending empty coordinates on geolocked queues, missing authentication cookies headers on restricted routes `/api/admin/*`.
+- Edge cases: Same user joining same queue twice simultaneously; multiple counters hitting `serve-next` at the exact same microsecond (Concurrency race testing); user connection drops when polling ETA.
+
+Performance assumptions:
+- Expected response time: High performance under minimal latency. API replies ~50-150ms depending on DB index loads.
+- Load handling capability: Due to use of Express and connection pooling in Mongo, acceptable for typical monolithic regional scale requests (e.g. 500-1000 concurrent socket users per instance).
+
+Reliability:
+- Expected uptime behavior: Crons run isolated and stateless guards applied (`notifyRunning` locks) against duplicate memory leaks on server. PM2 clustering or Node restarts might sever temporary Socket lines.
+- Failure handling: Centralized error handling returns strict structured `{ success: false, message: ...}` instead of exposing sensitive thread dumps.
+
+--------------------------------------------------
+
+[11. PERFORMANCE & METRICS (ASSUME SYSTEM WORKS)]
+- Speed (response time): Optimized; heavy document joins localized, Socket provides latency-free perceived loading.
+- Efficiency: Uses geospatial index querying (`2dsphere`) replacing intensive in-memory loop coordinate distances.
+- Scalability: Architecture relies horizontally scalable NodeJS but stateful socket rooms require Redis Adapters for multi-server node distribution.
+- Reliability: High; uses soft-locks (schema history copies vs permanent deletion) and robust schema constraints.
+
+--------------------------------------------------
+
+[12. DIAGRAM SUPPORT DATA (CRITICAL)]
+DFD:
+- Processes: Authenticate User, Register Provider Entity, Approve Entity, Queue Creation, Generate Token, Process Queue, Trigger Chron Notification.
+- Inputs/Outputs: Registration forms, Geo-cords -> ETAs, Action payloads -> Auth Cookies, Token Data.
+- Data stores: User Store, Providers Store, Services Store, Live Tickets, Historic Ticket log, Counter map.
+
+Use Case:
+- Actors: End User, Service Provider Business, Queue Counter Staff, Platform Super-Admin.
+- Actions: 'Search Services' (User), 'Request Approval' (Provider), 'Mark Complete' (Counter), 'Ban/Activate Entity' (Admin).
+
+ER Diagram:
+- Entities: User, ServiceProvider, Service, Queue, Ticket, Counter, QueueHistory, Notification, Review.
+- Attributes: Ticket (status, token_num, timestamps). ServiceProvider (address, coords, images, active).
+- Relationships: ServiceProvider 1:N Service -> 1:N Queue -> 1:N Ticket. Ticket N:1 User. Counter N:1 Queue.
+
+System Architecture:
+- Components (frontend, backend, DB): Context-React SPA -> REST API (Express JSON/Multiparts) -> Document DB (MongoDB Atlas). Sidecar -> WebSocket bi-directional link.
+- Interaction flow: Browser HTTP requests routed > Authentication > Controller Query > DB response > JSON Delivery -> Realtime update dispatched across Socket stream matrix.
+
+--------------------------------------------------
+
+[13. MISSING / OPTIONAL FEATURES]
+- Features NOT found but commonly expected:
+  - Third-party Payment integration for paid service queues (Stripe/Paypal).
+  - WebPush (ServiceWorker) mobile native push notifications rather than just in-app sockets/emails.
+  - Support for micro-service decoupled socket backplane via Redis pub/sub.
+- Incomplete parts:
+  - Potentially standard un-graceful fallbacks in pure WebSocket disconnect scenarios without local-storage queue synchronization.

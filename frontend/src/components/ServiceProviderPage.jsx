@@ -255,8 +255,11 @@ const ServiceProviderPage = () => {
     pendingBookings: stats?.activeBookings || 0,
     completedBookings: stats?.completedBookings || 0,
     activeServices: stats?.activeServices || 0,
-    averageWaitTime: `${historyData?.stats?.avgWaitTime || 0} mins`
+    averageWaitTime: historyData?.stats?.avgWaitTime
+      ? `${historyData.stats.avgWaitTime} mins`
+      : `${stats?.configuredAvgServiceTime || 15} mins`
   }
+
 
   return (
     <div className="service-provider-page">
@@ -337,7 +340,15 @@ const ServiceProviderPage = () => {
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
+          <button
+            className="sp-tab-button"
+            onClick={() => navigate('/service-provider/stats')}
+            style={{ color: '#a78bfa' }}
+          >
+            Stats
+          </button>
         </div>
+
 
         <div className="sp-content">
           {activeTab === 'dashboard' && (
@@ -346,7 +357,7 @@ const ServiceProviderPage = () => {
                 <div className="sp-dashboard-card">
                   <h3>Recently Joined</h3>
                   <div className="schedule-list">
-                    {bookings.length === 0 ? <p>No one in queue.</p> : 
+                    {bookings.length === 0 ? <p>No one in queue.</p> :
                       bookings.slice(0, 5).map(b => (
                         <div key={b._id} className="schedule-item">
                           <div className="schedule-time">#{b.tokenNumber}</div>
@@ -366,7 +377,9 @@ const ServiceProviderPage = () => {
                     <button className="btn-option" onClick={() => navigate('/service-provider/create-service')}>Add Service</button>
                     <button className="btn-option" onClick={() => navigate('/service-provider/counters')}>Manage Counters</button>
                     <button className="btn-option" onClick={() => navigate('/reception-dashboard')}>Reception Desk</button>
+                    <button className="btn-option" onClick={() => navigate('/service-provider/stats')}>📊 Analytics & Stats</button>
                   </div>
+
                 </div>
               </div>
             </div>
@@ -385,8 +398,8 @@ const ServiceProviderPage = () => {
                       <h4>Operational Queues</h4>
                       {s.queues?.map(q => (
                         <div key={q._id} className="q-mini-row">
-                          <span>{q.queueName} {q.isOnBreak && <b style={{color:'#ef4444'}}>(ON BREAK)</b>}</span>
-                          <button 
+                          <span>{q.queueName} {q.isOnBreak && <b style={{ color: '#ef4444' }}>(ON BREAK)</b>}</span>
+                          <button
                             className={`btn-toggle-break ${q.isOnBreak ? 'resume' : 'break'}`}
                             onClick={() => handleToggleBreak(q._id)}
                           >
@@ -429,28 +442,28 @@ const ServiceProviderPage = () => {
           )}
 
           {activeTab === 'history' && (
-             <div className="sp-history-section">
-                <div className="history-stats-mini">
-                  <div>Served: {historyData.stats.usersServed}</div>
-                  <div>Avg Wait: {historyData.stats.avgWaitTime}m</div>
-                </div>
-                <table className="bookings-table">
-                  <thead>
-                    <tr><th>Token</th><th>User</th><th>Service</th><th>Served At</th><th>Wait</th></tr>
-                  </thead>
-                  <tbody>
-                    {historyData.history.map(h => (
-                      <tr key={h._id}>
-                        <td>#{h.tokenNumber}</td>
-                        <td>{h.user?.name}</td>
-                        <td>{h.service?.serviceName}</td>
-                        <td>{h.servedTime ? new Date(h.servedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A'}</td>
-                        <td>{h.actualWaitDuration}m</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-             </div>
+            <div className="sp-history-section">
+              <div className="history-stats-mini">
+                <div>Served: {historyData.stats.usersServed}</div>
+                <div>Avg Wait: {historyData.stats.avgWaitTime}m</div>
+              </div>
+              <table className="bookings-table">
+                <thead>
+                  <tr><th>Token</th><th>User</th><th>Service</th><th>Served At</th><th>Wait</th></tr>
+                </thead>
+                <tbody>
+                  {historyData.history.map(h => (
+                    <tr key={h._id}>
+                      <td>#{h.tokenNumber}</td>
+                      <td>{h.user?.name}</td>
+                      <td>{h.service?.serviceName}</td>
+                      <td>{h.servedTime ? new Date(h.servedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A'}</td>
+                      <td>{h.actualWaitDuration}m</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {activeTab === 'settings' && (
@@ -461,19 +474,19 @@ const ServiceProviderPage = () => {
                   <form onSubmit={handleUpdateProfile} className="settings-form">
                     <div className="settings-form-group">
                       <label>Business Name</label>
-                      <input 
-                        type="text" 
-                        value={settingsForm.businessName} 
-                        onChange={e => setSettingsForm({...settingsForm, businessName: e.target.value})}
+                      <input
+                        type="text"
+                        value={settingsForm.businessName}
+                        onChange={e => setSettingsForm({ ...settingsForm, businessName: e.target.value })}
                         placeholder="Organization Name"
                       />
                     </div>
                     <div className="settings-form-group">
                       <label>Contact Phone</label>
-                      <input 
-                        type="text" 
-                        value={settingsForm.phone} 
-                        onChange={e => setSettingsForm({...settingsForm, phone: e.target.value})}
+                      <input
+                        type="text"
+                        value={settingsForm.phone}
+                        onChange={e => setSettingsForm({ ...settingsForm, phone: e.target.value })}
                         placeholder="Phone Number"
                       />
                     </div>
@@ -493,16 +506,16 @@ const ServiceProviderPage = () => {
                         initialLocation={selectedLocation}
                         initialAddress={settingsForm.address}
                       />
-                      <input 
-                        type="text" 
-                        value={settingsForm.address} 
+                      <input
+                        type="text"
+                        value={settingsForm.address}
                         onChange={e => {
                           const nextAddress = e.target.value
                           const hasLocationChanged =
                             (selectedLocation?.lat ?? null) !== (orgInfo?.location?.lat ?? null) ||
                             (selectedLocation?.lng ?? null) !== (orgInfo?.location?.lng ?? null)
 
-                          setSettingsForm({...settingsForm, address: nextAddress})
+                          setSettingsForm({ ...settingsForm, address: nextAddress })
                           setIsAddressChange(nextAddress.trim() !== (orgInfo?.address || '').trim() || hasLocationChanged)
                         }}
                         placeholder="Full Address"
@@ -511,8 +524,8 @@ const ServiceProviderPage = () => {
                       {isAddressChange && (
                         <div className="settings-form-group" style={{ marginTop: '10px' }}>
                           <label>Photo Proof (Required for address change)</label>
-                          <input 
-                            type="file" 
+                          <input
+                            type="file"
                             accept="image/*"
                             onChange={e => setAddressPhoto(e.target.files[0])}
                             required
@@ -523,9 +536,9 @@ const ServiceProviderPage = () => {
                     </div>
                     <div className="settings-form-group">
                       <label>Description</label>
-                      <textarea 
-                        value={settingsForm.description} 
-                        onChange={e => setSettingsForm({...settingsForm, description: e.target.value})}
+                      <textarea
+                        value={settingsForm.description}
+                        onChange={e => setSettingsForm({ ...settingsForm, description: e.target.value })}
                         placeholder="Briefly describe your organization"
                       />
                     </div>
@@ -540,28 +553,28 @@ const ServiceProviderPage = () => {
                   <form onSubmit={handleChangePassword} className="settings-form">
                     <div className="settings-form-group">
                       <label>Current Password</label>
-                      <input 
-                        type="password" 
-                        value={passwordForm.oldPassword} 
-                        onChange={e => setPasswordForm({...passwordForm, oldPassword: e.target.value})}
+                      <input
+                        type="password"
+                        value={passwordForm.oldPassword}
+                        onChange={e => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
                         required
                       />
                     </div>
                     <div className="settings-form-group">
                       <label>New Password</label>
-                      <input 
-                        type="password" 
-                        value={passwordForm.newPassword} 
-                        onChange={e => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                      <input
+                        type="password"
+                        value={passwordForm.newPassword}
+                        onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                         required
                       />
                     </div>
                     <div className="settings-form-group">
                       <label>Confirm New Password</label>
-                      <input 
-                        type="password" 
-                        value={passwordForm.confirmPassword} 
-                        onChange={e => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                      <input
+                        type="password"
+                        value={passwordForm.confirmPassword}
+                        onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                         required
                       />
                     </div>
@@ -570,7 +583,7 @@ const ServiceProviderPage = () => {
                     </button>
                   </form>
 
-                  <div className="settings-extra-actions" style={{marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem'}}>
+                  <div className="settings-extra-actions" style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
                     <h4>Account Management</h4>
                     <div className="settings-option">
                       <div>
