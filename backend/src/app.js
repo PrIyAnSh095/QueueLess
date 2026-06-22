@@ -22,14 +22,29 @@ const allowedOrigins = rawOrigins
   .map((o) => o.trim())
   .filter(Boolean);
 
+// Optional: auto-allow all Vercel preview URLs for this project
+// Set VERCEL_PROJECT_NAME=queueless on Render to enable this
+const vercelProject = process.env.VERCEL_PROJECT_NAME || "";
+const vercelPreviewRegex = vercelProject
+  ? new RegExp(`^https://${vercelProject}[a-z0-9-]*\\.vercel\\.app$`, "i")
+  : null;
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true; // Allow no-origin (curl, health checks)
+  if (allowedOrigins.includes(origin)) return true;
+  if (vercelPreviewRegex && vercelPreviewRegex.test(origin)) return true;
+  // Always allow localhost for local dev
+  if (/^http:\/\/localhost:\d+$/.test(origin)) return true;
+  return false;
+};
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, Render health checks)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         return callback(null, true);
       }
+      console.warn(`CORS blocked: ${origin}`);
       return callback(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true
@@ -37,7 +52,16 @@ app.use(
 );
 
 // Handle preflight for all routes
-app.options("*", cors());
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  if (isOriginAllowed(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  }
+  res.sendStatus(204);
+});
 app.use(express.json());
 app.use(cookieParser());
 
