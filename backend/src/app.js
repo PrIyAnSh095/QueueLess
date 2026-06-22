@@ -15,12 +15,29 @@ import userRoutes from "./routes/user.routes.js";
 
 const app = express();
 
+// Build allowed origins list from env (comma-separated) plus local fallback
+const rawOrigins = process.env.FRONTEND_URL || "http://localhost:5173";
+const allowedOrigins = rawOrigins
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, Render health checks)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
     credentials: true
   })
 );
+
+// Handle preflight for all routes
+app.options("*", cors());
 app.use(express.json());
 app.use(cookieParser());
 

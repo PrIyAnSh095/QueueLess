@@ -43,9 +43,14 @@ setInterval(async () => {
 }, 5 * 60 * 1000);
 
 const server = http.createServer(app);
+const socketOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 export const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: socketOrigins,
     credentials: true
   }
 });
