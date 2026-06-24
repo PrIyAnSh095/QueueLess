@@ -23,7 +23,11 @@ export const requestJoinCode = async (req, res) => {
     const targetEmail = user.email;
 
     const code = await createOTP(targetEmail, "queue-join", { queueId, userLocation });
-    await sendOTPEmail(targetEmail, code, "queue-join");
+    const emailSent = await sendOTPEmail(targetEmail, code, "queue-join");
+
+    if (!emailSent) {
+      return res.status(500).json({ success: false, message: "Failed to send verification email. Please try again." });
+    }
 
     return res.json({
       success: true,

@@ -176,10 +176,14 @@ export async function sendOTPEmail(email, otp, purpose = "verification") {
   `;
 
   try {
-    await getTransporter().sendMail({ from: from(), to: email, subject, html });
+    const info = await getTransporter().sendMail({ from: from(), to: email, subject, html });
+    console.log(`[email] OTP sent to ${email} (purpose: ${purpose}) MsgId: ${info.messageId}`);
     return true;
   } catch (err) {
-    console.error("Email send error:", err.message);
+    console.error(`[email] FAILED to send OTP to ${email} (purpose: ${purpose})`);
+    console.error(`[email] Error: ${err.message}`);
+    console.error(`[email] Code: ${err.code} | Response: ${err.response || 'N/A'}`);
+    console.error(`[email] SMTP_USER set: ${!!process.env.SMTP_USER} | SMTP_PASS set: ${!!process.env.SMTP_PASS}`);
     return false;
   }
 }
