@@ -1,7 +1,14 @@
+import dns from "dns";
 import http from "http";
 import { Server } from "socket.io";
 import connectDB from "./config/db.js";
 import app from "./app.js";
+
+// Force Node.js to prefer IPv4 over IPv6 when resolving hostnames.
+// Render does not support outbound IPv6 routing, so resolving to IPv6 addresses causes ENETUNREACH errors.
+if (typeof dns.setDefaultResultOrder === "function") {
+  dns.setDefaultResultOrder("ipv4first");
+}
 import { checkAndNotifyUsers, checkExpiredTickets } from "./services/notification.service.js";
 import { setIO } from "./socket.js";
 
