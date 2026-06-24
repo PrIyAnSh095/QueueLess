@@ -13,10 +13,11 @@ const signToken = (user) =>
   });
 
 const setCookie = (res, token) => {
+  const isProduction = process.env.NODE_ENV === "production";
   res.cookie("token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/"
   });
@@ -153,6 +154,7 @@ export const login = async (req, res) => {
 
     return res.status(200).json({
       message: "Login successful",
+      token,
       user: { id: user._id, role: user.role, name: user.name, email: user.email }
     });
   } catch (error) {
@@ -363,7 +365,7 @@ export const googleOAuthCallback = async (req, res) => {
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const redirect = user.role === "provider" ? "/service-provider" : user.role === "admin" ? "/admin" : "/";
-    res.redirect(`${frontendUrl}${redirect}`);
+    res.redirect(`${frontendUrl}${redirect}?token=${token}`);
   } catch (error) {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     res.redirect(`${frontendUrl}/login?error=oauth_failed`);

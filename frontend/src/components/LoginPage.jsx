@@ -25,6 +25,9 @@ const LoginPage = () => {
 
     try {
       const res = await loginUser(formData);
+      if (res.data.token) {
+        localStorage.setItem("token", res.data.token);
+      }
       login(res.data.user);
 
       if (res.data.user.role === "admin") {

@@ -1,5 +1,5 @@
-import React from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider } from './utils/AuthContext'
 import ProtectedRoute from './utils/ProtectedRoute'
 import HomePage from './components/HomePage'
@@ -30,12 +30,31 @@ import AdminUpdateRequestsPage from './components/AdminUpdateRequestsPage'
 import OrgStatsPage from './components/OrgStatsPage'
 
 
+// Captures ?token= from Google OAuth redirect and stores it in localStorage
+const TokenCapture = () => {
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    if (token) {
+      localStorage.setItem('token', token);
+      // Clean the token from URL without triggering a reload
+      params.delete('token');
+      const newSearch = params.toString();
+      const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [location.search]);
+  return null;
+};
+
 function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <div className="App">
           <Header />
+          <TokenCapture />
           <ScrollToHash />
           <main className="app-main">
             <Routes>
