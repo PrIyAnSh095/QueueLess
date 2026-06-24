@@ -43,14 +43,36 @@ setInterval(async () => {
 }, 5 * 60 * 1000);
 
 const server = http.createServer(app);
-const socketOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+
+// Build allowed origins — same logic as app.js
+const rawSocketOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
 
+const vercelProjectSocket = process.env.VERCEL_PROJECT_NAME || "";
+const vercelPreviewRegexSocket = vercelProjectSocket
+  ? new RegExp(`^https://${vercelProjectSocket}[a-z0-9-]*\\.vercel\\.app$`, "i")
+  : null;
+
+const isSocketOriginAllowed = (origin) => {
+  if (!origin) return true;
+  if (rawSocketOrigins.includes(origin)) return true;
+  if (vercelPreviewRegexSocket && vercelPreviewRegexSocket.test(origin)) return true;
+  if (/^http:\/\/localhost:\d+$/.test(origin)) return true;
+  return false;
+};
+
 export const io = new Server(server, {
   cors: {
-    origin: socketOrigins,
+    origin: (origin, callback) => {
+      if (isSocketOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`Socket.IO CORS blocked: ${origin}`);
+        callback(new Error(`Socket.IO CORS: origin ${origin} not allowed`));
+      }
+    },
     credentials: true
   }
 });

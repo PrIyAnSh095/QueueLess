@@ -91,9 +91,9 @@ const UserViewService = () => {
   const getFreshLocation = useCallback(async () => {
     const pos = await new Promise((resolve, reject) =>
       navigator.geolocation.getCurrentPosition(resolve, reject, { 
-        timeout: 15000, // Increased for better GPS lock
+        timeout: 8000,
         enableHighAccuracy: true, 
-        maximumAge: 0 
+        maximumAge: 30000  // allow a slightly cached position to speed things up
       })
     );
     const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -132,6 +132,10 @@ const UserViewService = () => {
       return;
     }
 
+    // Disable the button immediately
+    setJoining(true);
+    setError('');
+
     let latestLocation = userLocation;
     try {
       latestLocation = await getFreshLocation();
@@ -146,13 +150,12 @@ const UserViewService = () => {
     }
 
     if (!latestLocation) {
+      setJoining(false);
       setShowLocationModal(true);
       return;
     }
 
     try {
-      setJoining(true);
-      setError('');
       await requestJoinCodeAPI({ queueId: selectedQueue._id, userLocation: latestLocation });
       setShowVerification(true);
     } catch (err) {
